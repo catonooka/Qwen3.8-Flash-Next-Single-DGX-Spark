@@ -539,6 +539,10 @@ if [[ -n "$YARN_FACTOR" ]]; then
     # reads (nvidia/qsa.py) and what vLLM's max-len check scales by. The
     # existing mrope_section / rope_theta / partial_rotary_factor survive.
     VLLM_ARGS+=("--hf-overrides" "$(printf "'{\"text_config\":{\"rope_parameters\":{\"rope_type\":\"yarn\",\"factor\":%s,\"original_max_position_embeddings\":%s}}}'" "$YARN_FACTOR" "$NATIVE_MAX_MODEL_LEN")")
+elif [[ -n "${HF_TEXT_OVERRIDES:-}" ]]; then
+    # A/B lane for text_config flags (e.g. IndexShare MTP). Single JSON object
+    # merged under text_config; keep it small and explicit.
+    VLLM_ARGS+=("--hf-overrides" "'{\"text_config\":$HF_TEXT_OVERRIDES}'")
 fi
 VLLM_ARGS+=("--load-format" "safetensors")
 VLLM_ARGS+=("--safetensors-load-strategy" "lazy")
@@ -566,7 +570,9 @@ if [[ "$MTP_NUM_SPECULATIVE_TOKENS" -gt 0 ]]; then
                 printf "%s", out
             }')]"
     fi
-    VLLM_ARGS+=("--speculative-config" "$(printf "'{\"method\":\"mtp\",\"num_speculative_tokens\":%s%s%s}'" "$MTP_NUM_SPECULATIVE_TOKENS" "$_SPEC_SCHED" "$_SPEC_ARGMAX")")
+    _SPEC_NODROP=""
+    [[ -n "${SPEC_DISABLE_EAGLE_BLOCK_DROP:-}" ]] && _SPEC_NODROP=',"disable_eagle_block_drop":true'
+    VLLM_ARGS+=("--speculative-config" "$(printf "'{\"method\":\"mtp\",\"num_speculative_tokens\":%s%s%s%s}'" "$MTP_NUM_SPECULATIVE_TOKENS" "$_SPEC_SCHED" "$_SPEC_ARGMAX" "$_SPEC_NODROP")")
 fi
 _CG_SIZES="$CUDAGRAPH_CAPTURE_SIZES"
 if [[ "$_CG_SIZES" == "auto" ]]; then
