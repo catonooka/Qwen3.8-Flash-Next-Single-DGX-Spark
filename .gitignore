@@ -48,6 +48,8 @@
 
 # --- perf-campaign additions (2026-09-07) ---
 !/files/mamba_utils_50729.py
+!/skinny/Dockerfile.skinny-gemm
+!/skinny/patch-skinny-gemm-tp1.py
 !/bench/prefill_ladder.py
 !/bench/warmturn.py
 !/bench/longctx_decode.py

@@ -70,11 +70,16 @@ Net on this host: prefill 2,128 to 2,332 tok/s at 32k (+9.6 percent), C4
   chunk size 8192 (prefill minus 3.7 percent), IndexShare MTP (neutral on
   this stack), and the prefill threshold above (trade, not a win).
 
-To reproduce the standing config: `IMAGE=vllm-skinny-tp1:v1`,
-`MAX_NUM_BATCHED_TOKENS=4096`, `SPEC_DISABLE_EAGLE_BLOCK_DROP=1`, and the
-`EXTRA_DOCKER_ARGS` mounts from the campaign doc. Verify patches are live
-with the in-container marker greps before trusting any gate result; a
-parallel process reverting `.env` once produced a false pass here.
+The standing config is now the fork's shipped defaults: `.env.sample`
+carries the skinny image, `MAX_NUM_BATCHED_TOKENS=4096`,
+`SPEC_DISABLE_EAGLE_BLOCK_DROP=1`, and the seven read-only patch mounts in
+`EXTRA_DOCKER_ARGS`, so a fresh clone of this repo reproduces the measured
+numbers with no manual editing. Build the skinny image first:
+`docker build -t vllm-skinny-tp1:v1 -f skinny/Dockerfile.skinny-gemm skinny/`
+(or keep the stock image line and lose the skinny gains). Verify patches
+are live with the in-container marker greps before trusting any gate
+result; a parallel process reverting `.env` once produced a false pass
+here.
 
 ## Measured profile
 
