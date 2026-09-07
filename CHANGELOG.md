@@ -1,9 +1,182 @@
 # Changelog
 
 Notable changes to this deployment kit. The repository is not versioned; entries
-are grouped by date, newest first. Every measurement named here was taken on the
-one DGX Spark this repo is written for — treat them as that host's numbers, not
-as promises.
+are grouped by date, newest first. Every measurement named here was taken on
+the one DGX Spark this repo is written for — treat them as that host's numbers,
+not as promises.
+
+## 2026-09-07 (night) — LPT=2048 A/B: decode-ITL win, prefill trade, rejected for standing
+
+- `--long-prefill-token-threshold 2048` (in-image knob, G30 #7 action, never
+  A/B'd): caps the per-request chunk for prompts > 2048 tok. Measured
+  (bench/mixed.py, 2× 64k injection): decoder ITL during the 64k prefill
+  improves 1,489→877 ms mean (−41%), quiet/after ITL unchanged. BUT solo
+  prefill pays for it: 2,052 vs 2,279 tok/s @64k (**−10%**), 2,043 @32k
+  (−12%). Second run hit a full prefix-cache hit on the 64k prompt (TTFT
+  1.85s — the radix tree absorbed it; bench quirk to remember).
+- Verdict: it's a multi-tenant ITL protector, not a speed win — prefill is an
+  explicit target lane, so NOT standing. Documented as the opt-in for
+  "someone is coding while a 64k doc gets ingested" scenarios.
+- Standing re-verified healthy after revert: nodrop flag live (1),
+  50729 marker live (2).
+
+## 2026-09-07 (evening, session 4) — #53388 disable_eagle_block_drop SHIPPED: warm agent turns −56%
+
+- Re-verified the corpus for remaining wins; picked #53388 (main-only flag,
+  G30 #2 action): keep the trailing prefix-cache block under MTP instead of
+  dropping it. Sliced the upstream diff to 6 vllm/v1+config files that exist
+  in the runtime image, applied clean at small offsets, compile-checked
+  (`s3/slice53388.py` → `s3/out53388/`). Mounted via EXTRA_DOCKER_ARGS;
+  flag plumbed through start.sh `SPEC_DISABLE_EAGLE_BLOCK_DROP` (guarded for
+  set -u). Mounted-but-unset = byte-identical semantics (only call-site
+  change is `use_eagle()` → `use_eagle_block_drop()`), so the OFF arm of the
+  A/B ran on the same mounts.
+- **A/B (bench/warmturn.py, 16k ctx, 5 agent turns ×2 runs)**: turn-2
+  re-prefill 2.53s → 1.17s (**−54%**); steady warm turns ~1.15s → ~0.51s
+  (**−56%**). Beats upstream's −26% (we are more prefix-bound: 1600-token
+  blocks). Decode/prefill lanes untouched (C1 46-50, C4 112-118, prefill
+  2,318 @32k — all noise vs standing).
+- **Quality gate PASSED** (label `nodrop53388`): needles 3/3 @120k
+  5/50/95%, reasoning 11/11 — acceptance unharmed (matches upstream
+  "acceptance unchanged").
+- Also scoped this session: #54513/#54873 QSA stream = qwen4_exp package
+  files, NOT our qwen3_8_flash_next → manual port (deferred);
+  `long_prefill_token_threshold`/`max_num_partial_prefills` = next cheap A/B.
+
+## 2026-09-07 (evening, session 3) — #50729 re-shipped + gated FOR REAL; IndexShare A/B neutral
+
+- **Parallel-session hazard (root-caused)**: a concurrent Hermes session
+  ("anything faster bro", 12:43) reverted `.env` from `.env.bak-pre-s3` at
+  14:09:47, silently wiping the #50729 mount, then booted
+  `flashnext-standing` at 14:10:42. The earlier `mamba50729c` gate "PASS"
+  therefore ran on an UNPATCHED server and is VOID. Lesson: before trusting
+  any gate on this host, verify the patch marker IN-CONTAINER in the same
+  breath as the gate result (`grep -c is_left_overlap .../mamba_utils.py`).
+  Also that session's CHANGELOG entry (MNBT 8192 rejected −3.7%) stands.
+- Mount re-added to `.env` (backup: `.env.bak-standing-50729`), clean boot,
+  marker=2 verified, **gate PASSED for real** (label `real50729`: needles
+  3/3 @120k 5/50/95, reasoning 11/11).
+- **IndexShare MTP (S7) — measured, neutral, not standing**: the full
+  machinery already ships in the image (`set_skip_topk` in mtp.py +
+  `_share_mtp_indices` in llm_base_proposer.py); enable = one flag
+  (`HF_TEXT_OVERRIDES='{"index_share_for_mtp_iteration":true}'` via the new
+  start.sh A/B lane). Measured: C1 59.7 ms/step ≈ 47-50 tok/s (flat),
+  acceptance 2.88 vs 2.90 (unchanged), long-ctx 32k decode 39.4 vs 38.9
+  tok/s, 64k single-shots straddle. Draft-indexer cost is not our binding
+  constraint (byte floor is); keep OFF, re-test post-swizzle.
+- start.sh gained the `HF_TEXT_OVERRIDES` env lane (YARN=0 compatible) —
+  guard uses `${HF_TEXT_OVERRIDES:-}` (set -u).
+- S8 standing ladder (tok/s, prose): C1 47-50, C4 115-118, prefill 2,332
+  @32k / 2,279 @64k (documented). vs baseline C1 47.6-48.7 flat, C4 +7.7%,
+  prefill +9.6%.
+
+## 2026-09-07 (afternoon, session 2) — S3: MNBT 4096→8192 resweep, rejected
+
+- **A/B on the standing stack** (skinny image, single-variable flip, ladder
+  16k/32k/64k × 3 reps each, salted): 4096 arm means 2,145 / 2,265 / 2,255
+  tok/s vs 8192 arm 2,174 / 2,181 / 2,203. **8192 loses −3.7% @32k and −2.3%
+  @64k**; the earlier one-shot +10.9% @32k (366f6df) does not reproduce on a
+  same-boot A/B — that pair differed in rope and KV config, as its own entry
+  warned. MNBT stays 4096. Raw rows: `logs/prefill_ladder.jsonl` tags
+  `s3-base-mnbt4096`, `s3-mnbt8192`.
+- **Boot-time flashinfer AutoTuner engaged at 8192** (21 mxfp8_gemm tactics
+  profiled for the new chunk shapes) — relevant whenever MNBT changes again,
+  and quiet partial evidence the G8 "untuned tactic-0" concern applies to
+  chunk-width shapes too.
+- **Housekeeping**: stale transient units from earlier sessions
+  (`flashnext-mxhead7/8`, `flashnext-revert-s5`, `flashnext-50729`) raced
+  `docker run` name collisions twice; all stopped and cleared. A leftover
+  background #50729-verify watcher (parented to the gateway) fired one launch
+  after its session ended — check `ps -ef | grep 'bash -lic'` before booting
+  on this host. Standing config re-verified healthy on final boot.
+
+## 2026-09-07 (evening) — #50729 Mamba prefix-cache race fix shipped (mount lane)
+
+- vLLM PR #50729 (Mamba overlapping state-copy race; we run prefix caching ON,
+  so this was a live correctness bug) applied as a **runtime mount**, no image
+  build: diff fetched from patch-diff CDN, `awk`-sliced to the mamba_utils.py
+  hunks, `patch` applied clean at +5/+6 line offsets, AST-checked.
+  Live file: `files/mamba_utils_50729.py`, wired via `.env` EXTRA_DOCKER_ARGS
+  → `vllm/v1/worker/mamba_utils.py:ro`. Verified in-container
+  (`is_left_overlap` marker x2).
+- **Quality gate PASSED** (label `mamba50729c`): needles 3/3 @120k at
+  5/50/95%, reasoning 11/11 — the needle suite hammers exactly the changed
+  prefix-hit copy path (shared 120k prefix + short queries).
+- Incident log: first gate attempt hit a kernel NV_ERR_NO_MEMORY (GPU VA
+  alloc) mid-120k-prefill and killed the engine; start.sh supervision
+  auto-relaunched; attempt 2 died writing to root-owned `quality/` (fixed
+  with chown); attempt 3 passed clean. Single crash with a pass on re-run =
+  documented boot-lottery class, not the patch.
+- **#55180 (FP8 blockwise swizzle) scoped but NOT built**: patch touches
+  csrc/ CUDA sources that do not exist in the runtime image → needs a full
+  source-build of vllm (hours-class project, torch 2.13+cu130 toolchain).
+  Deferred as its own block; the runtime-mount lane cannot carry it.
+- Upstream audit this session: author repo still has NO new commits (0 ahead
+  of our clone); official vllm/vllm-openai nightlies carry no Flash-Next
+  class — cherry-pick mounting is the only inheritance route available.
+
+## 2026-09-07 (afternoon) — S5: MXFP8 lm_head executed, measured, reverted
+
+- **Built** (all working, reusable): derived checkpoint
+  `Mia-AiLab/Qwen3.8-Flash-Next-NVFP4-MXFP8HEAD` (hardlink clone, shard 33
+  quantized; rel-Frobenius 2.66%, gate ≤3), loader fix
+  `files/model_lmhead_quant.py` (ParallelLMHead needs explicit
+  `quant_config=`; registration goes in config.json
+  `quantization_config.quantized_layers` under BOTH `lm_head` and
+  `language_model.lm_head`), and an MTP-drafter dequant remap in
+  `files/mtp_patched.py.orig` (drafter keeps a BF16 head; draft-vocab
+  slicing unchanged). Full write-up: `logs/S5-MXFP8HEAD-RESULTS.md`.
+- **Measured** (warm, 3 reps): C1 64.4 ms/step vs 59.8 baseline (**−7.7%**),
+  C4 107.3 vs 117.9. The MXFP8 GEMM at M≤4 loses to the skinny-tuned BF16
+  low-latency GEMM; bytes saved, time lost. The mxfp8_gemm autotune cache has
+  no M=1/4 entries for [248320,2560] — the head shape runs untuned.
+- **Reverted** per the A/B rule. Standing config unchanged: skinny image +
+  MNBT 4096 + original checkpoint. HC/router FP8 (S6) deprioritized for the
+  same kernel reason on this image; both re-open after the image bump brings
+  the newer FlashInfer/DeepGEMM sm12x kernels.
+
+## 2026-09-07
+
+### Changed (shipped, quality-gated)
+
+- **`MAX_NUM_BATCHED_TOKENS` 2048 → 4096** (`.env`). Salted-prefix prefill
+  ladder: 2,233 tok/s @32k vs 2,127.7 documented E0 (+4.7%); decode lanes
+  unchanged as expected (60.1 ms/step before and after). Verified live in the
+  container cmd (`--max-num-batched-tokens 4096`).
+- **Standing image = `vllm-skinny-tp1:v1`** (skinny-GEMM TP=1 patch; numerics
+  = F.linear; +8.6% was measured 2026-09-05 at MTP=2). On this boot, combined
+  skinny+MNBT4096: **prefill 2,332 tok/s @32k (+9.6% vs documented baseline)**,
+  2,279 @64k (+3.8%); C1 step 59.8 ms; C4 117.9 tok/s. Quality gate
+  `skinny-mnbt4096`: needles 3/3 @5/50/95% @120k, 11/11 reasoning tasks
+  complete; greedy diffs vs the stock capture match the boot-noise control
+  (18/20 diverge across boots on identical config), so no quality regression
+  is attributable. Full tables: `logs/RESULTS-2026-09-07.md`.
+
+### Verified no-ops / corrections to research
+
+- **FlashInfer autotune (G8's #1 action): already engaged.** Boot logs show
+  `kernel_warmup.py` running FlashInfer autotune with a persisted cache
+  (`flashinfer_autotune_cache/0.6.17/121a/...`, 162 configs, "0 new") and the
+  cache contains tuned `mxfp8_gemm` entries at M=1 for our exact K/N decode
+  shapes (1,128 entries total across 8 files). The "untuned tactic-0" finding
+  is stale for this image — do not re-plan.
+- **Margin census** (top1−top2 logprob gap, 15 diverse prompts, greedy):
+  min 0.50 ln, p50 0.75, p90 2.50 — comfortable headroom for the planned
+  INT8 lm_head + top-64 BF16 rescore. Saved `logs/margin_census_2026-09-07.json`.
+- **INT8 lm_head offline gate PASSED**: per-row symmetric INT8 round-trip on
+  the actual checkpoint `lm_head.weight` [248320,2560]: rel-Frobenius
+  **0.822%** (gate ≤3%), max row err 0.004×scale (uniform; no outlier rows),
+  rowmax max/p50 = 7.9×. Artifacts: `surgery/lm_head_int8.pt` (int8 q +
+  fp16 scales, 636 MB). Deployment (loader patch + top-64 rescore + W5 §4
+  six-gate) queued as the next campaign block.
+
+### Added
+
+- **`bench/prefill_ladder.py`** — salted-prefix TTFT prefill ladder
+  (prefix caching ON makes unsalted ladders measure radix hits; the first
+  unsalted run here read "40k tok/s"). Filler verified at 24.0 tok/entry via
+  `/tokenize`. Use this for all future prefill A/Bs.
+
 
 ## 2026-09-06
 
