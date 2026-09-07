@@ -211,7 +211,7 @@ except Exception as e:
             "Accept the terms on that page:\n"
             f"  https://huggingface.co/{sys.argv[1]}\n"
             "Then retry with HF_TOKEN set:\n"
-            f"  {sys.argv[2] if len(sys.argv) > 2 else 'HF_TOKEN=hf_... ./download.sh'}",
+            "  " + (sys.argv[2] if len(sys.argv) > 2 else "HF_TOKEN=hf_... ./download.sh"),
             file=sys.stderr,
         )
         sys.exit(1)
