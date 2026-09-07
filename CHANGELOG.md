@@ -188,6 +188,22 @@ the vLLM counters around it. Full write-up and every table in
 
 ### Added
 
+- **`ABLIT` 0/1 flag** (`.env`, `start.sh`, `download.sh`). `ABLIT=1` serves
+  the gated Keys checkpoint
+  `drowzeys/keys-Qwen3.8-flash-next-ablit-Mia-Single-Spark-only` (Mia-layout
+  QSA `o_proj` splice at L15/19/23/27/31/35/39/43/47). The download is the
+  **full** ~99 GiB snapshot so Hugging Face's terms gate stays in force —
+  accept access on the repo page, then `ABLIT=1 ./download.sh` with
+  `HF_TOKEN`. It is the same size as stock to the byte (9 of 37 shards differ
+  in content, none in length). The packed PLE table is reused from stock, but
+  only after `ABLIT_META.json` is confirmed to report `edit_ple: false`.
+  `TP1_MODEL_ID` still overrides checkpoint selection. `README.md` summarises
+  the gate's terms (18+, stated intended use, prohibited uses, Qwen Community
+  License) rather than just telling you to accept them, adds the ablit
+  checkpoint to what the AGPL does *not* cover, and gains a **Credits**
+  section crediting Qwen/Alibaba, MiaAI Lab, local-inference-lab and Keys
+  (drowzeys) for the splice, mirroring the checkpoint's own `CREDITS.md`.
+
 - **BF16 GDN recurrent state** (`MAMBA_SSM_CACHE_DTYPE`, `start.sh`).
   **+8.5% aggregate decode at 8 streams, with long-context retrieval
   unchanged.** The checkpoint sets `mamba_ssm_dtype = float32`, but the fused
@@ -261,6 +277,18 @@ the vLLM counters around it. Full write-up and every table in
   `NV_ERR_NO_MEMORY` after `/health`. On a host with more memory the cap is
   looser and 20 may be granted in full. `README.md` updated in the five places
   that named 16 as the shipped value.
+
+### Fixed
+
+- **Snapshot resolution picked the wrong directory** (`start.sh`,
+  `download.sh`). Both scripts took `ls "$MODEL_PATH/snapshots" | head -1`,
+  which is alphabetical by commit hash, not by state. With more than one
+  snapshot in the cache — a revision bump, or an aborted download left beside a
+  finished one — that could resolve to an incomplete tree, so `start.sh` failed
+  the shard check on a checkpoint that was actually present. Both now share a
+  `resolve_snapshot` helper that prefers `refs/main` when complete, then the
+  newest complete snapshot, and falls back to an incomplete one only so
+  `download.sh` can resume it.
 
 ### Measured
 

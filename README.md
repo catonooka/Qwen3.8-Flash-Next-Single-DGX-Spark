@@ -13,17 +13,28 @@ with the PLE table offloaded and memory-mapped. This is a **vision-language**
 model: text, images and video all work out of the box (see below). Nothing here depends on the
 2-node files it was derived from.
 
+```
+cp .env.sample .env        # edit IMAGE / HF_TOKEN if needed
+./download.sh              # fetch the ~99 GiB checkpoint (resumable)
+./start.sh                 # ~10-12 min to /health; serves on :8888
+./stop.sh                  # container + watchdog, graceful
+```
+
+`start.sh` never downloads anything — it resolves the checkpoint from the local
+Hugging Face cache and fails fast if it is absent. Budget ~130 GiB of free disk:
+99 GiB for the checkpoint plus the ~27 GiB packed PLE table built on first launch.
+
 ## This fork: measured improvements over upstream `ef1af5f`
 
 Four changes, each A/B tested on the same host with the same bench scripts,
 each quality-gated (needles 3/3 at 120k tokens, 11/11 reasoning) before
 being kept. Upstream's own work (65k draft vocab, BF16 recurrent state, FP8
-KV hoist) is inherited as-is; nothing below repeats it.
+KV hoist, ABLIT lane) is inherited as-is; nothing below repeats it.
 
 | Lane | Upstream recipe | This fork | Improvement |
 |---|---|---|---|
 | Prefill @32k (262k native) | 2,128 tok/s | 2,332 tok/s | **+9.6%** |
-| Prefill @64k (262k native) | 2,195 tok/s | 2,279 tok/s | **+3.8%** |
+| Prefill @64k (262k native) | 2052 tok/s | 2,279 tok/s | **+11.0%** |
 | Prefill @400k (512k YaRN) | 1,602 tok/s | 1,776 tok/s | **+10.9%** (TTFT 250 s → 225 s) |
 | Warm agent turn (16k ctx) | ~1.15 s | ~0.51 s | **2.2x faster** |
 | 4 streams aggregate | 107.8 tok/s | 112–118 tok/s | **+4–9%** |
@@ -35,7 +46,7 @@ the skinny-GEMM image (`skinny/`, build with
 `docker build -t vllm-skinny-tp1:v1 -f skinny/Dockerfile.skinny-gemm skinny/`),
 vLLM #50729 backport (Mamba copy race), and vLLM #53388 backport
 (`disable_eagle_block_drop`, the agent-turn win). `.env.sample` ships all
-of it as defaults; a fresh clone reproduces the numbers with no manual
+of it as default; a fresh clone reproduces the numbers with no manual
 editing.
 
 Trade-offs and the full campaign log (including what was tried and
