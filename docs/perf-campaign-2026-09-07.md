@@ -7,12 +7,20 @@ a same-boot A/B on this DGX Spark, not from upstream claims.
 
 ## TL;DR
 
-| Lane | Before | After | Change |
+Baselines matter and there are two sets in circulation. The base README's
+headline numbers (48.7 single, 113.7 at 4 streams, 1,942 prefill at 32k)
+were measured at 512k YaRN with MAX_NUM_SEQS=8. The rows below are the
+matched A/B: upstream recipe vs this fork, same host, same benches, at the
+262k-native settings this repo ships. Both are real measurements; they are
+not comparable to each other.
+
+| Lane (262k native, matched A/B) | Upstream recipe, this host | This fork, same host | Change |
 |---|---|---|---|
-| Single stream (C1) | 47.6 to 48.7 tok/s | 46 to 50 tok/s | flat |
-| 4 concurrent (C4) | 107.8 tok/s | 112 to 118 tok/s | +7.7 percent |
+| Single stream, prose | 47.6 to 48.7 tok/s | 46 to 50 tok/s | flat |
+| 4 streams aggregate | 107.8 tok/s | 112 to 118 tok/s | +4 to +9 percent |
 | Prefill at 32k | 2,128 tok/s | 2,332 tok/s | +9.6 percent |
-| Warm agent turn | about 1.15 s | about 0.51 s | 2.2x faster |
+| Prefill at 64k | 2,195 tok/s | 2,279 tok/s | +3.8 percent |
+| Warm agent turn (16k ctx) | about 1.15 s | about 0.51 s | 2.2x faster |
 
 Quality: every shipped change passed the gate (needles 3/3 at 120k tokens
 at 5, 50, and 95 percent positions, plus the 11-task reasoning suite).

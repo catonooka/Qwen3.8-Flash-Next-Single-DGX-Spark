@@ -66,7 +66,7 @@ not as promises.
   constraint (byte floor is); keep OFF, re-test post-swizzle.
 - start.sh gained the `HF_TEXT_OVERRIDES` env lane (YARN=0 compatible) —
   guard uses `${HF_TEXT_OVERRIDES:-}` (set -u).
-- S8 standing ladder (tok/s, prose): C1 47-50, C4 115-118, prefill 2,332
+- S8 standing ladder (tok/s, prose, 262k-native matched A/B vs upstream recipe on this host): C1 47-50 (upstream 47.6-48.7, flat), C4 115-118 (upstream 107.8, +4-9), prefill 2,332 @32k (upstream 2,128, +9.6). NOTE: the base README headlines (48.7 / 113.7 / 1,942) are 512k-YaRN MAX_NUM_SEQS=8 measurements and are not the baseline for these rows
   @32k / 2,279 @64k (documented). vs baseline C1 47.6-48.7 flat, C4 +7.7%,
   prefill +9.6%.
 

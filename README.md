@@ -44,8 +44,34 @@ at 120k tokens, 11/11 reasoning suite) before being kept. Full write-up in
 | vLLM #50729 backport (Mamba copy race) | Fixes silent state corruption on prefix-cache hits; no speed claim |
 | vLLM #53388 backport (`disable_eagle_block_drop`) | Warm agent turns 1.15 s to 0.51 s (2.2x) |
 
-Net on this host: prefill 2,128 to 2,332 tok/s at 32k (+9.6 percent), C4
-107.8 to 112-118 tok/s, single-stream unchanged, agent turns 2.2x faster.
+### Scoreboard, with the baselines named
+
+Two different "before" numbers exist and they are NOT interchangeable:
+
+- **Base README headlines**: measured at 512k YaRN with `MAX_NUM_SEQS=8`
+  (single 48.7, 4-stream 113.7, 8-stream 162.9; prefill 1,942 tok/s at 32k
+  after the FP8 scale hoist).
+- **This fork's lanes**: measured at 262k native rope with
+  `MAX_NUM_SEQS=4`, which is what `.env.sample` here ships.
+
+The like-for-like comparison is the matched A/B: upstream recipe and this
+fork, same host, same bench scripts, same 262k-native settings, only the
+kept changes between them:
+
+| Lane (262k native, matched A/B) | Upstream recipe, this host | This fork, same host | Change |
+|---|---|---|---|
+| Single stream, prose | 47.6 to 48.7 tok/s | 46 to 50 tok/s | flat |
+| 4 streams aggregate | 107.8 tok/s | 112 to 118 tok/s | +4 to +9 percent |
+| Prefill at 32k | 2,128 tok/s | 2,332 tok/s | +9.6 percent |
+| Prefill at 64k | 2,195 tok/s | 2,279 tok/s | +3.8 percent |
+| Warm agent turn (16k ctx) | about 1.15 s | about 0.51 s | 2.2x faster |
+
+Read against the base README's own 512k-YaRN-seqs-8 rows instead, the fork
+at its shipped settings measures 46 to 50 single and 112 to 118 at 4
+streams against their 48.7 and 113.7: inside boot-to-boot noise, i.e. the
+decode lanes are a wash on either baseline, and the honest wins are
+prefill (+9.6 percent), warm agent turns (2.2x), and the correctness
+fixes. The fork does not ship an 8-stream row at all (`MAX_NUM_SEQS=4`).
 
 **Trade-offs of the standing config, stated plainly:**
 
