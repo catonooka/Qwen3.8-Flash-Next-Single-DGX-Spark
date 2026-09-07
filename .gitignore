@@ -46,6 +46,19 @@
 !/bench/sweep.py
 !/bench/mixed.py
 
+# --- perf-campaign additions (2026-09-07) ---
+!/files/mamba_utils_50729.py
+!/bench/prefill_ladder.py
+!/bench/warmturn.py
+!/bench/longctx_decode.py
+!/s3/slice53388.py
+!/s3/out53388/vllm/config/speculative.py
+!/s3/out53388/vllm/v1/core/kv_cache_utils.py
+!/s3/out53388/vllm/v1/core/sched/scheduler.py
+!/s3/out53388/vllm/v1/core/single_type_kv_cache_manager.py
+!/s3/out53388/vllm/v1/simple_kv_offload/manager.py
+!/s3/out53388/vllm/distributed/kv_transfer/kv_connector/v1/offloading/scheduler.py
+
 # --- measurement write-ups ---------------------------------------------
 # Host-specific, but they carry the numbers the README and CHANGELOG cite.
 !/docs/synthesis-astra-fable-2026-09-05.md
