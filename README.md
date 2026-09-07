@@ -68,6 +68,14 @@ noise, so the baseline is honest.
 | Prefill at 64k | 2,195 tok/s | 2,279 tok/s | +3.8 percent |
 | Warm agent turn (16k ctx) | about 1.15 s | about 0.51 s | 2.2x faster |
 
+At 512k YaRN (the config the base README's long-context rows use), the same
+matched A/B with salted prompts: **prefill at 400k is 1,602 tok/s upstream
+vs 1,776 tok/s on this fork (+10.9 percent)**, and 1,977 vs 2,202 at 32k.
+The fork's chunk and kernel gains hold at the long extreme. (The base
+README's own minus 2.7 percent at 400k row is their internal BF16-vs-FP8
+dtype comparison, not a fork comparison.) Raw rows: logs/prefill_ladder.jsonl
+tags `yarn-base-400k`, `yarn-fork-400k`.
+
 Note on the base README's headline rows (48.7 single, 113.7 at 4 streams,
 162.9 at 8, prefill 1,942 at 32k): those are 512k YaRN with
 `MAX_NUM_SEQS=8` measurements and are not the baseline for this table.

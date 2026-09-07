@@ -22,6 +22,11 @@ not comparable to each other.
 | Prefill at 64k | 2,195 tok/s | 2,279 tok/s | +3.8 percent |
 | Warm agent turn (16k ctx) | about 1.15 s | about 0.51 s | 2.2x faster |
 
+512k YaRN extension (measured later the same day, matched A/B, salted,
+2 reps per arm): prefill at 400k is 1,602 tok/s on the upstream recipe vs
+1,776 on the fork (+10.9 percent); 1,977 vs 2,202 at 32k. The gains hold
+at the long extreme. TTFT at 400k drops from about 250 s to about 225 s.
+
 Quality: every shipped change passed the gate (needles 3/3 at 120k tokens
 at 5, 50, and 95 percent positions, plus the 11-task reasoning suite).
 
