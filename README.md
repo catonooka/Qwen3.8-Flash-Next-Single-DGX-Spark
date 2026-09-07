@@ -32,53 +32,61 @@ the host's `/dev/shm` until reboot. `./stop.sh --force` skips the wait.
 
 ## What this fork changes (2026-09-07 perf campaign)
 
-Upstream `ef1af5f` plus a measured optimisation pass on one host. Every
-change below was A/B tested on the same boot and quality-gated (needles 3/3
-at 120k tokens, 11/11 reasoning suite) before being kept. Full write-up in
+Forked from upstream `ef1af5f` (2026-09-06). Everything upstream shipped to
+that point is inherited as-is and is NOT our work: the 65k reduced draft
+vocabulary, BF16 recurrent state (+8.5 percent at 8 streams), the FP8 KV
+scale hoist, the sweep harness. Upstream has none of the four changes
+below (verified against their tree on 2026-09-07), so nothing here repeats
+their work. Full write-up in
 [`docs/perf-campaign-2026-09-07.md`](docs/perf-campaign-2026-09-07.md).
 
-| Change | Effect |
-|---|---|
-| `MAX_NUM_BATCHED_TOKENS` 2048 to 4096 | Prefill +5 percent at 32k |
-| Skinny-GEMM image (`vllm-skinny-tp1:v1`) | Prefill +4.4 percent, decode +8.6 percent (earlier A/B) |
-| vLLM #50729 backport (Mamba copy race) | Fixes silent state corruption on prefix-cache hits; no speed claim |
-| vLLM #53388 backport (`disable_eagle_block_drop`) | Warm agent turns 1.15 s to 0.51 s (2.2x) |
+### Our changes
 
-### Scoreboard, with the baselines named
+| Change | Kind | Effect |
+|---|---|---|
+| `MAX_NUM_BATCHED_TOKENS` 2048 to 4096 | config default | Prefill +5 percent at 32k |
+| Skinny-GEMM image (`skinny/`, this repo) | new image layer | Prefill +4.4 percent; decode +8.6 percent in the earlier MTP k=2 A/B |
+| vLLM #50729 backport (Mamba copy race) | file mount | Fixes silent state corruption on prefix-cache hits; no speed claim |
+| vLLM #53388 backport (`disable_eagle_block_drop`) | file mount + flag | Warm agent turns 1.15 s to 0.51 s (2.2x) |
 
-Two different "before" numbers exist and they are NOT interchangeable:
+All four were A/B tested on the same boot and quality-gated (needles 3/3 at
+120k tokens, 11/11 reasoning suite) before being kept.
 
-- **Base README headlines**: measured at 512k YaRN with `MAX_NUM_SEQS=8`
-  (single 48.7, 4-stream 113.7, 8-stream 162.9; prefill 1,942 tok/s at 32k
-  after the FP8 scale hoist).
-- **This fork's lanes**: measured at 262k native rope with
-  `MAX_NUM_SEQS=4`, which is what `.env.sample` here ships.
+### What we improved
 
-The like-for-like comparison is the matched A/B: upstream recipe and this
-fork, same host, same bench scripts, same 262k-native settings, only the
-kept changes between them:
+Matched A/B: upstream recipe vs this fork, same host, same bench scripts,
+at the 262k-native `MAX_NUM_SEQS=4` settings this repo ships. Cross-check:
+our baseline measurement of the upstream recipe (47.6 to 48.7 single, 107.8
+at 4 streams) matches upstream's own harness numbers (47.8 / 106.7) within
+noise, so the baseline is honest.
 
-| Lane (262k native, matched A/B) | Upstream recipe, this host | This fork, same host | Change |
+| Lane | Upstream recipe, this host | This fork, same host | Change |
 |---|---|---|---|
-| Single stream, prose | 47.6 to 48.7 tok/s | 46 to 50 tok/s | flat |
+| Single stream, prose | 47.6 to 48.7 tok/s | 46 to 50 tok/s | flat (bandwidth-bound; see below) |
 | 4 streams aggregate | 107.8 tok/s | 112 to 118 tok/s | +4 to +9 percent |
 | Prefill at 32k | 2,128 tok/s | 2,332 tok/s | +9.6 percent |
 | Prefill at 64k | 2,195 tok/s | 2,279 tok/s | +3.8 percent |
 | Warm agent turn (16k ctx) | about 1.15 s | about 0.51 s | 2.2x faster |
 
-Read against the base README's own 512k-YaRN-seqs-8 rows instead, the fork
-at its shipped settings measures 46 to 50 single and 112 to 118 at 4
-streams against their 48.7 and 113.7: inside boot-to-boot noise, i.e. the
-decode lanes are a wash on either baseline, and the honest wins are
-prefill (+9.6 percent), warm agent turns (2.2x), and the correctness
-fixes. The fork does not ship an 8-stream row at all (`MAX_NUM_SEQS=4`).
+Note on the base README's headline rows (48.7 single, 113.7 at 4 streams,
+162.9 at 8, prefill 1,942 at 32k): those are 512k YaRN with
+`MAX_NUM_SEQS=8` measurements and are not the baseline for this table.
+Read against them, our decode lanes sit inside boot-to-boot noise, and
+this fork ships no 8-stream row at all (`MAX_NUM_SEQS=4`). The honest wins
+are prefill, warm agent turns, and two correctness fixes.
 
-**Trade-offs of the standing config, stated plainly:**
+Single-stream decode is flat because the model is about 100 GB against a
+273 GB/s bus: one pass over the weights costs about 42 ms and we run at
+about 60 ms. The remaining gap is bandwidth physics, and every kernel-level
+lever we tested on this image (head quantization, index sharing, chunk
+sizes) matched or lost.
+
+### What we traded off
 
 - The #53388 flag keeps about 1,600 extra KV tokens cached per
   conversation. The pool is about 1.08M tokens, eviction is LRU, and live
   requests always outrank cold cache, so the cost is cache depth (fewer
-  distinct old conversations retained), never live capacity. Upstream
+  distinct old conversations retained), never live capacity. Upstream vLLM
   labels the flag experimental for acceptance-rate risk; our gate measured
   acceptance unchanged (2.88 vs 2.90 tokens per step). If agent-session
   output ever degrades, disable `SPEC_DISABLE_EAGLE_BLOCK_DROP` first.
@@ -89,18 +97,25 @@ fixes. The fork does not ship an 8-stream row at all (`MAX_NUM_SEQS=4`).
   costs 10 to 12 percent solo prefill. It is opt-in, not standing.
 - The skinny kernels are tuned for batch 4 and below and our exact GEMM
   shapes. Large-batch workloads (16+ streams) should re-test against the
-  stock image. The patch asserts its anchors, so an incompatible image
+  stock image. The patch asserts its own anchors, so an incompatible image
   bump fails the build loudly instead of silently running unpatched.
-- Things measured and rejected, so you do not re-run them: MXFP8 lm_head
-  quantization (decode minus 7.7 percent, kernel slower than skinny BF16),
-  chunk size 8192 (prefill minus 3.7 percent), IndexShare MTP (neutral on
-  this stack), and the prefill threshold above (trade, not a win).
 
-The standing config is now the fork's shipped defaults: `.env.sample`
-carries the skinny image, `MAX_NUM_BATCHED_TOKENS=4096`,
+### Measured and rejected (do not re-run)
+
+MXFP8 lm_head quantization (decode minus 7.7 percent; the 8-bit GEMM kernel
+at batch 4 and below is slower than the skinny BF16 one), chunk size 8192
+(prefill minus 3.7 percent; the older +11 percent one-shot did not
+reproduce), IndexShare MTP (neutral on this stack; the machinery ships in
+the image but the draft indexer is not the binding constraint), and the
+prefill threshold above (a trade, not a win).
+
+### Reproducing
+
+The standing config is the fork's shipped defaults: `.env.sample` carries
+the skinny image, `MAX_NUM_BATCHED_TOKENS=4096`,
 `SPEC_DISABLE_EAGLE_BLOCK_DROP=1`, and the seven read-only patch mounts in
-`EXTRA_DOCKER_ARGS`, so a fresh clone of this repo reproduces the measured
-numbers with no manual editing. Build the skinny image first:
+`EXTRA_DOCKER_ARGS`, so a fresh clone reproduces the measured numbers with
+no manual editing. Build the skinny image first:
 `docker build -t vllm-skinny-tp1:v1 -f skinny/Dockerfile.skinny-gemm skinny/`
 (or keep the stock image line and lose the skinny gains). Verify patches
 are live with the in-container marker greps before trusting any gate
