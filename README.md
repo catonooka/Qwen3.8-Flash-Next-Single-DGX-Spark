@@ -30,6 +30,52 @@ command without running anything. `./stop.sh` sends SIGTERM and waits up to
 the container runs with `--ipc host`, so segments it leaves behind leak onto
 the host's `/dev/shm` until reboot. `./stop.sh --force` skips the wait.
 
+## What this fork changes (2026-09-07 perf campaign)
+
+Upstream `ef1af5f` plus a measured optimisation pass on one host. Every
+change below was A/B tested on the same boot and quality-gated (needles 3/3
+at 120k tokens, 11/11 reasoning suite) before being kept. Full write-up in
+[`docs/perf-campaign-2026-09-07.md`](docs/perf-campaign-2026-09-07.md).
+
+| Change | Effect |
+|---|---|
+| `MAX_NUM_BATCHED_TOKENS` 2048 to 4096 | Prefill +5 percent at 32k |
+| Skinny-GEMM image (`vllm-skinny-tp1:v1`) | Prefill +4.4 percent, decode +8.6 percent (earlier A/B) |
+| vLLM #50729 backport (Mamba copy race) | Fixes silent state corruption on prefix-cache hits; no speed claim |
+| vLLM #53388 backport (`disable_eagle_block_drop`) | Warm agent turns 1.15 s to 0.51 s (2.2x) |
+
+Net on this host: prefill 2,128 to 2,332 tok/s at 32k (+9.6 percent), C4
+107.8 to 112-118 tok/s, single-stream unchanged, agent turns 2.2x faster.
+
+**Trade-offs of the standing config, stated plainly:**
+
+- The #53388 flag keeps about 1,600 extra KV tokens cached per
+  conversation. The pool is about 1.08M tokens, eviction is LRU, and live
+  requests always outrank cold cache, so the cost is cache depth (fewer
+  distinct old conversations retained), never live capacity. Upstream
+  labels the flag experimental for acceptance-rate risk; our gate measured
+  acceptance unchanged (2.88 vs 2.90 tokens per step). If agent-session
+  output ever degrades, disable `SPEC_DISABLE_EAGLE_BLOCK_DROP` first.
+- 4096-token prefill chunks make concurrent decoders wait about 1.5 s per
+  chunk boundary during a long prefill (measured: 1,489 ms mean ITL during
+  a 64k ingest). If multi-tenant decode latency matters more than prefill
+  speed, `--long-prefill-token-threshold 2048` cuts that to 877 ms but
+  costs 10 to 12 percent solo prefill. It is opt-in, not standing.
+- The skinny kernels are tuned for batch 4 and below and our exact GEMM
+  shapes. Large-batch workloads (16+ streams) should re-test against the
+  stock image. The patch asserts its anchors, so an incompatible image
+  bump fails the build loudly instead of silently running unpatched.
+- Things measured and rejected, so you do not re-run them: MXFP8 lm_head
+  quantization (decode minus 7.7 percent, kernel slower than skinny BF16),
+  chunk size 8192 (prefill minus 3.7 percent), IndexShare MTP (neutral on
+  this stack), and the prefill threshold above (trade, not a win).
+
+To reproduce the standing config: `IMAGE=vllm-skinny-tp1:v1`,
+`MAX_NUM_BATCHED_TOKENS=4096`, `SPEC_DISABLE_EAGLE_BLOCK_DROP=1`, and the
+`EXTRA_DOCKER_ARGS` mounts from the campaign doc. Verify patches are live
+with the in-container marker greps before trusting any gate result; a
+parallel process reverting `.env` once produced a false pass here.
+
 ## Measured profile
 
 `.env.sample` ships **262,144 context (YaRN off), MTP 3, `HOST_RESERVE_GIB=26`,
