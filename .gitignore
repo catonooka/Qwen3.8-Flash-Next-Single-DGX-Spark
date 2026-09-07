@@ -64,6 +64,7 @@
 !/docs/synthesis-astra-fable-2026-09-05.md
 !/docs/overnight-2026-09-05.md
 !/docs/goal-overnight-2026-09-05.md
+!/docs/perf-campaign-2026-09-07.md
 
 # Deliberately NOT tracked:
 #   bench/*                   the rest of the local benchmark scripts
