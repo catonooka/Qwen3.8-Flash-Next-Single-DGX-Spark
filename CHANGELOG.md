@@ -934,3 +934,34 @@ Ops notes:
   (Bole tree-verify GB10-native is the top future lever; MonoMoE persistent MoE;
   Minima NVFP4-GDN; SlimSpec/NanoSpec draft-head; +12-item community action list).
 
+
+## 2026-09-12 (later) — INT8 verify lm_head + BF16 top-64 rescore: SHIPPED (+4% C1, zero quality cost)
+
+The W5 two-stage protocol, live. `files/logits_processor.py` (mounted over the
+image's, env-gated `VLLM_INT8_VERIFY_HEAD=1`):
+
+- Stage 1: per-row-INT8 head screens the full 248,320 vocab via `torch._int_mm`
+  (batch padded to 32 rows; kernel needs M>16 strictly).
+- Stage 2: top-64 positions rescored with exact BF16 rows and scattered back.
+- Certificate (measured on the real tensor, int8_head_bench.py): BF16-top1 sits
+  inside INT8-top64 at **100.00%** of positions; margins min/median 0.0/0.25 logits.
+  Argmax is therefore BF16-identical by construction at every measured position.
+- Microbench: head GEMV 5.12 ms BF16 -> 3.05 ms INT8 (249 -> 208 GB/s effective;
+  half the bytes at ~83% of the kernel efficiency) + 0.03 ms rescore.
+- Lazy int8 build at first eager call (pre-capture), then the branch is
+  CUDA-graph-captured (static shapes only); mid-capture first-call falls back to BF16.
+
+A/B (same boot class, sparkDash prose): C1 48.0 -> 49.8 agg tok/s (+3.8%),
+C4 123.0 -> 121.5 (noise), C8 179.8 -> 181.4 (noise). E2E prose 33.9 -> 35.4.
+Acceptance IDENTICAL: per-position 0.851/0.681/0.480 (standing: 0.85/0.63/0.47 class).
+Quality: reasoning 11/11 (twice), needles 2/3 — the 5% needle "FAIL" is a grader
+format artifact (model answers the bare code "TAUPE-4471" instead of the full
+sentence; yesterday's no-patch spinfix boot shows the SAME signature; the value
+is retrieved correctly). Greedy text differs from the 09-07 capture at 20/20 —
+expected, this stack is documented boot-unstable (18/20 baseline).
+
+Standing stack now: spinfix image + ablit + trimix_fill_65k draft vocab + MTP3
++ #50729/#53388 mounts + #54048 router cuBLAS + INT8 verify head + LPI-1/2/3 off.
+Engine prose: C1 49.8 / C4 121.5 / C8 181.4. E2E prose C1 35.4.
+C4 soak (pre-INT8 stack): mean 98.3, p95 124.4, 0 dips/30 min. C8: 129.5 mean, 0 dips/20 min.
+

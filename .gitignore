@@ -65,6 +65,7 @@
 !/bench/bench_prose.py
 !/bench/sd_bench.py
 !/files/mtp_patched_topk.py
+!/files/logits_processor.py
 !/files/gate_linear.py
 !/int8_head_bench.py
 !/research4/arxiv-techniques.md
