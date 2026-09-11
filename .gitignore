@@ -57,6 +57,19 @@
 !/bench/prefill_ladder.py
 !/bench/warmturn.py
 !/bench/longctx_decode.py
+
+# --- 2026-09-12 C1-80 campaign ---
+# standing-stack relauncher (A/B switch), prose bench, sparkDash client,
+# F4a-lite draft top-K patch, #54048 router port, INT8 head probe, research4 corpus
+!/relaunch.sh
+!/bench/bench_prose.py
+!/bench/sd_bench.py
+!/files/mtp_patched_topk.py
+!/files/gate_linear.py
+!/int8_head_bench.py
+!/research4/arxiv-techniques.md
+!/research4/community-github.md
+!/research4/cuda-system.md
 !/s3/slice53388.py
 !/s3/out53388/vllm/config/speculative.py
 !/s3/out53388/vllm/v1/core/kv_cache_utils.py
