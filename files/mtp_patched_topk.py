@@ -114,10 +114,26 @@ def _attach_draft_vocab(model: nn.Module) -> None:
         model._draft_topk_k = 0
     model._draft_topk_cycle = 3  # num_speculative_tokens; refreshed each cycle
     if model._draft_topk_k > 0:
+        # CUDA-graph-safe static buffers (F4a PORT_NOTES §4): fixed shapes,
+        # written via copy_ between steps, never reallocated. max_bs covers
+        # MAX_NUM_SEQS; K rows cached per sequence.
+        max_bs = int(os.environ.get("VLLM_MTP_DRAFT_TOPK_MAX_BS", "32"))
+        model.register_buffer(
+            "_topk_rows_buf",
+            torch.zeros(
+                max_bs, model._draft_topk_k, dtype=torch.int64,
+                device=weight.device,
+            ),
+            persistent=False,
+        )
+        model.register_buffer(
+            "_topk_valid_bs", torch.zeros(1, dtype=torch.int64, device=weight.device),
+            persistent=False,
+        )
         logger.info(
             "MTP draft top-K: enabled, K=%d rows of the %d-row slice per "
-            "continuation draft step",
-            model._draft_topk_k, model._draft_lm_head_weight.shape[0],
+            "continuation draft step (static buffers, max_bs=%d)",
+            model._draft_topk_k, model._draft_lm_head_weight.shape[0], max_bs,
         )
     logger.info(
         "MTP draft vocab: %d of %d tokens (%.1f%%); draft lm_head %.2f -> %.2f "
@@ -529,28 +545,48 @@ class Qwen3_8FlashNextMTP(nn.Module, SupportsPP, Qwen3_8FlashNextMixtureOfExpert
         if self._draft_topk_step == 1 or self._draft_topk_step > 1 + getattr(
             self, "_draft_topk_cycle", 4
         ):
-            # First call of a fresh cycle: full-vocab (slice) logits + cache top-K rows.
+            # First call of a fresh cycle: full-slice logits; write the top-K
+            # row ids into the STATIC buffer via copy_ (graph-safe: shape is
+            # fixed at [max_bs, K]; rows beyond B keep stale values but are
+            # never selected because bmm only reads [:B]).
             self._draft_topk_step = 1
             logits = torch.nn.functional.linear(hidden_states.to(weight.dtype), weight)
-            self._draft_topk_rows = torch.topk(
-                logits, k, dim=-1
-            ).indices  # [B, K] slice-row ids
+            B = logits.shape[0]
+            top_rows = torch.topk(logits, k, dim=-1).indices  # [B, K]
+            buf = self._topk_rows_buf
+            if B <= buf.shape[0]:
+                buf[:B].copy_(top_rows)
+                self._topk_valid_bs.fill_(B)
+            else:
+                self._topk_valid_bs.fill_(0)  # too big: disable this cycle
             return logits.argmax(dim=-1)
 
-        # Continuation calls: tiny gather GEMV over the cached K rows.
-        rows = self._draft_topk_rows[: hidden_states.shape[0]]
-        w_k = weight.index_select(0, rows.reshape(-1).to(torch.long)).view(
-            rows.shape[0] * rows.shape[1], weight.shape[1]
-        )
-        h = (
-            hidden_states.to(weight.dtype)
-            .unsqueeze(1)
-            .expand(-1, k, -1)
-            .reshape(-1, weight.shape[1])
-        )
-        logits_k = torch.nn.functional.linear(h, w_k).view(
-            hidden_states.shape[0], k
-        )
+        # Continuation calls: gather GEMV over the cached K rows, using ONLY
+        # the static buffer and static-shape ops (CUDA-graph replay safe).
+        B = hidden_states.shape[0]
+        h2d = hidden_states.reshape(B, -1)
+        capturing = torch.cuda.is_current_stream_capturing()
+        if (
+            h2d.shape[1] != weight.shape[1]
+            or B > self._topk_rows_buf.shape[0]
+            or (not capturing and int(self._topk_valid_bs.item()) != B)
+        ):
+            # Batch changed mid-cycle (padded capture width, scheduler mix):
+            # fall back to the full slice GEMV for this call. Correctness is
+            # identical; only the speedup is skipped. During CUDA-graph
+            # capture we also take the fallback (no .item() sync allowed);
+            # the captured replay then re-runs this Python branch decision,
+            # so live traffic takes the fast path whenever B matches.
+            logits = torch.nn.functional.linear(h2d.to(weight.dtype), weight)
+            return logits.argmax(dim=-1)
+        rows = self._topk_rows_buf[:B]  # [B, K] static view
+        w_k = weight.index_select(0, rows.reshape(-1)).view(
+            B, rows.shape[1], weight.shape[1]
+        )  # [B, K, H]
+        logits_k = torch.bmm(
+            h2d.to(weight.dtype).unsqueeze(1),  # [B, 1, H]
+            w_k.transpose(1, 2),  # [B, H, K]
+        ).squeeze(1)  # [B, K]
         return rows.gather(1, logits_k.argmax(dim=-1, keepdim=True)).squeeze(1)
 
     def get_top_tokens(self, hidden_states: torch.Tensor) -> torch.Tensor:

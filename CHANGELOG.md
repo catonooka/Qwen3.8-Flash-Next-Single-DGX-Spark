@@ -887,3 +887,50 @@ the vLLM counters around it. Full write-up and every table in
 - Whether the 6 GiB watchdog floor is the right threshold has never been
   examined; it was chosen during bring-up.
 - `MEMWATCH_GRACE` (10 s) is too short for vLLM to shut down cleanly.
+
+## 2026-09-12 — C1-80 campaign, day 1 (research4 + A/B ladder)
+
+Baselines (sparkDash engine-level, standing stack + LPI-2/3 idle states off):
+prose C1 48.0 / C4 123.0 / C8 179.8 agg tok/s; code 61.2 / 162.5 / 256.5.
+E2E prose C1 (bench/bench_prose.py, 8 prompts × 2 reps): 33.9 → 34.7 after LPI-2 off.
+
+Shipped / kept:
+- **LPI-2 + LPI-1(X925) idle-state disables** (sysfs; stacked on 09-11's LPI-3):
+  e2e prose +2.3% same-boot; engine C4 123 vs 105-class on 09-10 numbers.
+- **#54048 router cuBLAS out_dtype port** (`files/gate_linear.py`, mounted):
+  perf-neutral (C1 48.7 vs 48.0, noise), quality-positive — family-120 now takes
+  the fused bf16×bf16→fp32 router GEMM instead of the copy-kernel bf16-rounded
+  fallback. Upstream's own fix, S-effort port, anchors matched exactly.
+
+Tried and rejected (with receipts):
+- **--moe-backend flashinfer_cutlass**: the MTP drafter is W4A16_NVFP4 (weight-only,
+  u8+f8e4m3 scales); FLASHINFER_CUTLASS refuses that quant scheme and the engine
+  dies at profile_run ("does not support the deployment configuration"). The boot-time
+  auto->MARLIN fallback for the drafter is LOAD-BEARING, not a misdetection. Main
+  model stays FLASHINFER_CUTLASS via auto.
+- **F4a-lite draft top-K (K=8192)** (`files/mtp_patched_topk.py`, env-gated
+  VLLM_MTP_DRAFT_TOPK): infrastructure works (static buffers, graph-capture-safe,
+  capture+serve verified), but restricting continuation drafts to the DRAFTER'S OWN
+  step-0 top-K craters acceptance: per-position 0.85/0.63/0.47 → 0.139/0.024/0.006,
+  e2e prose 34.7 → 25.8. The candidate set must come from TARGET verify logits
+  (two-file port: gpu_model_runner top-K capture hook + proposer read), which is
+  the original F4a design — banked as the next attempt with all capture-safety
+  lessons (bmm not flat linear; batch-width fallbacks; .item() only outside capture).
+
+Ops notes:
+- relaunch.sh now reproduces the standing stack byte-for-byte (spinfix image, ablit,
+  trimix_fill_65k, 17 mounts) with single-variable override lanes; it is the A/B switch.
+- bench/bench_prose.py + bench/sd_bench.py + bench/soak.py locked against concurrent
+  runs (bench_lock.py) after a double-bench contaminated 3 records (marked invalid
+  in prose_results.jsonl).
+- mxfp8 GEMM autotune: the standing image DOES boot-time autotune M=1..32 buckets
+  (tactics 1/3 at M≤32, 0 at 64/128) — t6's "untuned tactic-0" verdict is stale for
+  this image. The lm_head-shaped [248320,2560] MXFP8 GEMM remains untuned (largest
+  tuned N is 16384), which re-opens S5 (MXFP8 head) only after a tactics-cache entry
+  exists for it.
+- #55375 (PLE conv strides) does NOT apply: our model uses conv1d-based
+  ple_layer.py, not qwen4_exp's Triton _ple_conv_kernel.
+- 3-report research corpus: research4/{arxiv-techniques,community-github,cuda-system}.md
+  (Bole tree-verify GB10-native is the top future lever; MonoMoE persistent MoE;
+  Minima NVFP4-GDN; SlimSpec/NanoSpec draft-head; +12-item community action list).
+

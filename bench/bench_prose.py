@@ -5,7 +5,13 @@
 and mean tok/s plus the spec-decode acceptance window from the server log.
 Appends one JSON line per label to prose_results.jsonl.
 """
-import argparse, json, re, subprocess, time, urllib.request
+import argparse, atexit, json, os, re, subprocess, sys, time, urllib.request
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import bench_lock
+
+bench_lock.acquire()
+atexit.register(bench_lock.release)
 
 PROMPTS = [
     ("prose-nightmarket", "Write a vivid 320-word travel essay about a night market in Hanoi.", 350),
