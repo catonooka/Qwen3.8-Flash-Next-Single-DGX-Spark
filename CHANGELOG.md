@@ -1097,5 +1097,8 @@ recipe in .env.sample and relaunch.sh.
   logits_processor + llm_base_proposer mounts + INT8 both heads + VLLM_F4B=1
   (dry-run verified). Current running container = identical config (launched
   with explicit overrides), so it IS the new standing without a reboot.
-- C8 soak on the shipped stack: see soak_results.jsonl (f4b-standing-c8).
+- C8 soak on the shipped stack: mean 129.7 / p95 147.2 / min 108.0 / 0 dips
+  (116,749 tok) — sustained parity with pre-F4b (130.3), floor held. The +5%
+  one-shot decode gain (190 vs 181) is diluted by re-prefill time in the
+  sustained protocol; no regression anywhere.
 
