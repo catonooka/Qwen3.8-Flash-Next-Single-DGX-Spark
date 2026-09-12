@@ -998,3 +998,23 @@ optimum in theory). Measured: C1 prose 54.5 vs 55.8 at k=3 (−2.3%), C4 122.7
 experts per step and eats the gain. The k=3 optimum is structural on this
 model, not a draft-cost artifact. relaunch.sh gained the MTP_K override lane.
 
+
+## 2026-09-12 (close-out) — HC-mixer INT8: REJECTED by measurement; final-stack soaks PASS
+
+HC microbench (real shapes, decode M=4/16): the HC weights are tiny (6.5 MB per
+module) and L2-resident — BF16 F.linear already runs 373-632 GB/s on them, while
+per-row INT8 torch._int_mm manages only 56-150 GB/s at these narrow-N shapes
+(0.27x-0.50x). The research2 "+7% HC-FP8" projection assumed DRAM-streamed
+weights; on this model the HC bucket is not bandwidth-bound. Lane closed with
+data; do not revisit without a different kernel class.
+
+Final-stack soaks (INT8 both heads + #54048 + idle states off):
+- C4 25 min: mean 100.9 / p95 124.3 / min 75.9 / 0 dip windows (151,344 tokens)
+- C8 15 min: mean 130.3 / p95 145.9 / min 108.2 / 0 dip windows (117,284 tokens)
+  (C8 floor rose from 80.5 -> 108.2 vs the pre-INT8 stack.)
+
+Campaign totals (sparkDash prose): C1 48.0 -> 55.8 (+16.2%), e2e 33.9 -> 37.3;
+code C1 61.2 -> 66.2; C4/C8 stable at ~101/130 sustained with zero dips.
+Everything shipped is in the fork (9 commits today) with the reproduction
+recipe in .env.sample and relaunch.sh.
+
