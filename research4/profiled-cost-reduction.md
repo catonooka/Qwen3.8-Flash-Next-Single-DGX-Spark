@@ -189,3 +189,14 @@ Baseline 55.8 tok/s C1 prose; goal 80 (+43%). Gains below are per-action estimat
   Remaining live levers: 4 (draft-head Triton row-GEMV, +3-6% claim,
   unverified), 5 (GDN decode via CuTe-DSL, M-effort), then L-class (Bole,
   Minima NVFP4-dense). The 80-tps goal needs the L-class moves.
+
+## LOCAL VERIFICATION ADDENDUM 2 (Hermes, 2026-09-12 11:45)
+
+- Action #4 (draft-head Triton row-GEMV) CLOSED by arithmetic: the INT8 draft
+  head at M=1 measures 758 us at 221 GB/s effective = 81% of the 273 GB/s
+  bus (on-box, --memory 4g). Max kernel headroom 19% on an op worth ~4% of
+  the cycle = <1% e2e. The "+3-6%" claim assumed the op was far off bus
+  saturation; it is not.
+- Remaining verified-live levers after actions 1-4 closed: GDN CuTe-DSL
+  decode (M), Bole tree-verify (L, plan banked), Minima NVFP4-dense (L).
+  Everything S-class on this image is now exhausted.
