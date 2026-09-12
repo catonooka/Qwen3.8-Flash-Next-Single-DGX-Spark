@@ -1122,3 +1122,21 @@ recipe in .env.sample and relaunch.sh.
   one-shot decode gain (190 vs 181) is diluted by re-prefill time in the
   sustained protocol; no regression anywhere.
 
+## 2026-09-12 (day-2 close) — F4b hardened standing verified; lanes 1-3 closed
+
+- Final standing = spinfix + ablit + trimix_fill_65k + MTP3 + #54048 +
+  INT8 both heads + F4b v2 (hardened guard a5a8aac) + LPI-1/2/3 off.
+  Verified warm: C1 54.8-56.5 / C4 ~125 / C8 186-190 one-shot, acceptance
+  0.881/0.680/0.485. e2e prose 37.2. relaunch.sh reproduces everything with
+  no arguments.
+- Day-2 scoreboard: F4b v2 SHIPPED (+5% C8, +2 tok/s ceiling reads);
+  Marlin atomic-add REJECTED (clean warm data); piecewise-drafter lane
+  CLOSED (V2-vs-compile incompatibility + shape threading); HC skinny/INT8
+  headroom claim REJECTED on-box (L2-resident 293-497 GB/s); prefix-cache
+  #53504 non-issue confirmed (~8x on first repeat).
+- The 80-tps gap (56 vs 80) is now provably L-class-only: remaining levers
+  per research4/profiled-cost-reduction.md = draft-head Triton row-GEMV
+  (+3-6% claim, S), GDN CuTe-DSL decode (M), then Bole tree-verify (L,
+  GB10-native evidence, port plan in research4/bole-port-plan.md) and
+  Minima NVFP4-dense (L). 11 commits day-2 (5fa216a..d603ed0).
+
