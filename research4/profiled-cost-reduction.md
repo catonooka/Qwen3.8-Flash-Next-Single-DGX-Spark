@@ -200,3 +200,14 @@ Baseline 55.8 tok/s C1 prose; goal 80 (+43%). Gains below are per-action estimat
 - Remaining verified-live levers after actions 1-4 closed: GDN CuTe-DSL
   decode (M), Bole tree-verify (L, plan banked), Minima NVFP4-dense (L).
   Everything S-class on this image is now exhausted.
+
+## LOCAL VERIFICATION ADDENDUM 3 (Hermes, 2026-09-13 03:56)
+
+- Piecewise-drafter re-probe with hardened guard: REJECTED conclusively.
+  C1 31 (-43%), acceptance collapsed to 0.570/0.420/0.329 — the V1 runner's
+  draft threading degrades the drafter beyond the 3-8 ms it saves. Dead until
+  an image where V2 model runner supports torch.compile.
+- 32k draft-vocab slice: CLOSED by arithmetic. Tokenizer coverage on real
+  samples: 32k = 80.0% EN prose / 30.2% VI / 89.1% code vs 65k = 98-100%.
+  Outside-slice proposals would crater acceptance on VI text (F4a/F4b-v1
+  failure class). The 65k trimix is already near-optimal for this corpus mix.
