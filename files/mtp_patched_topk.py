@@ -106,6 +106,28 @@ def _attach_draft_vocab(model: nn.Module) -> None:
         index.to(torch.int32),
         persistent=False,
     )
+    # F4b (fork 2026-09-12): step-0 draft sampling seeded from the TARGET's
+    # verify/prefill top-64 stash (module-global in logits_processor). The
+    # F4a-lite experiment proved the draft's own step-0 top-K is the WRONG
+    # candidate set for step 1 (acceptance 0.139); the target distribution at
+    # the frontier is the right set for step 0. Steps 1+ stay unrestricted.
+    if os.environ.get("VLLM_F4B", "0").strip() == "1":
+        try:
+            model._f4b_steps = max(1, int(os.environ.get("VLLM_F4B_STEPS", "3")))
+            model._f4b_block = max(1, int(os.environ.get("VLLM_F4B_BLOCK", "4")))
+        except ValueError:
+            model._f4b_steps, model._f4b_block = 3, 4
+        model._f4b_call = 0
+        t2d = torch.full((org_vocab,), -1, dtype=torch.int32, device=weight.device)
+        t2d[index.long()] = torch.arange(
+            len(ids), dtype=torch.int32, device=weight.device
+        )
+        model._f4b_t2d = t2d
+        logger.info(
+            "MTP F4b: step-0 target-seeded sampling enabled (steps=%d block=%d)",
+            model._f4b_steps,
+            model._f4b_block,
+        )
     # INT8 draft head (fork 2026-09-12): the slice GEMV runs 3x per MTP-3
     # cycle (0.335 GiB BF16 each). A per-row INT8 copy halves the read; the
     # argmax then gets an exact top-32 BF16 rescore over the slice rows.
@@ -624,6 +646,45 @@ class Qwen3_8FlashNextMTP(nn.Module, SupportsPP, Qwen3_8FlashNextMixtureOfExpert
             return self.logits_processor.get_top_tokens(self.lm_head, hidden_states)
         i8w = getattr(self, "_draft_i8_weight", None)
         if i8w is not None and hidden_states.dim() == 2:
+            # F4b step-0 (fork 2026-09-12): restrict this draft argmax to the
+            # TARGET's top-64 candidate set at the frontier, stashed by the
+            # verify pass (module-global in logits_processor). Acceptance is
+            # provably >= unrestricted at temp-0: if the draft's global argmax
+            # would be accepted it IS the target argmax (stash rank 0, inside
+            # the set), so the restricted pick is identical; otherwise the
+            # restricted pick at least has a chance. Steps 1+ run unrestricted.
+            blk = getattr(self, "_f4b_block", 0)
+            if blk:
+                self._f4b_call = getattr(self, "_f4b_call", 0) + 1
+                if (self._f4b_call - 1) % blk == 0:  # step 0 of this draft block
+                    try:
+                        from vllm.model_executor.layers.logits_processor import (
+                            _f4b_stash_get,
+                        )
+
+                        stash = _f4b_stash_get()
+                    except Exception:
+                        stash = None
+                    if stash is not None:
+                        Kp1 = blk  # num_spec + 1 sampled rows per request
+                        B0, H0 = hidden_states.shape
+                        # request i's frontier row = i*(K+1)+K (request-major,
+                        # real requests first; padded tail rows are dummies)
+                        rr = (
+                            torch.arange(B0, device=hidden_states.device) * Kp1
+                            + (Kp1 - 1)
+                        ).clamp_(max=stash["top64"].shape[0] - 1)
+                        cands = stash["top64"][rr].long()  # [B0, 64] target ids
+                        d = self._f4b_t2d[cands]  # [B0, 64] slice ids, -1=outside
+                        safe = d.clamp(min=0)  # static-shape gather
+                        w_k = weight[safe.reshape(-1)].view(B0, 64, H0)
+                        hh = hidden_states.unsqueeze(1).expand(-1, 64, -1)
+                        exact = torch.einsum("bkh,bkh->bk", hh.float(), w_k.float())
+                        exact = exact.masked_fill(d < 0, float("-inf"))
+                        pick = cands.gather(
+                            1, exact.argmax(dim=-1, keepdim=True)
+                        ).squeeze(1)
+                        return pick.to(torch.long)
             # INT8 slice screen + exact top-32 rescore. Drafts only affect
             # acceptance, and the rescored argmax is exact for the picked row.
             B, H = hidden_states.shape

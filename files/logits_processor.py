@@ -17,6 +17,17 @@ from vllm.model_executor.layers.vocab_parallel_embedding import (
 )
 from vllm.platforms import current_platform
 
+# F4b (fork 2026-09-12): module-global verify-topk stash shared between the
+# TARGET model's LogitsProcessor instance (writer, inside the captured verify
+# graph) and the MTP drafter (reader, eager). Device tensors only — Python
+# side-effects do not execute on graph replay, so the version counter is an
+# int64 tensor incremented by an in-place op inside the graph.
+_F4B_STASH: dict | None = None
+
+
+def _f4b_stash_get() -> dict | None:
+    return _F4B_STASH if _F4B_STASH is not None else None
+
 
 # --8<-- [start:logits_processor]
 @PluggableLayer.register("logits_processor")
@@ -101,6 +112,15 @@ class LogitsProcessor(PluggableLayer):
         # Scatter exact values back: argmax now equals the BF16 argmax
         # whenever BF16-top1 is within this top-64 (certified 100%).
         logits = logits.scatter(1, top.indices, exact)
+        # F4b: stash this row's top-64 token ids for the drafter's step-0 seed.
+        # Row 0 is rewritten every verify/prefill pass (global module stash, see
+        # _F4B_STASH); version counter is a device tensor incremented in-place
+        # inside the captured graph so replay advances it without Python.
+        stash = _F4B_STASH
+        if stash is not None:
+            Bcur = min(B, stash["top64"].shape[0])
+            stash["top64"][:Bcur].copy_(top.indices[:Bcur].to(torch.int32))
+            stash["ver"] += 1
         return logits.to(hidden_states.dtype)
 
     def forward(
@@ -161,6 +181,16 @@ class LogitsProcessor(PluggableLayer):
                     .to(torch.int8)
                 ).contiguous()
                 self._int8_w, self._int8_scale, self._int8_bf = w8, scale, wref
+                global _F4B_STASH
+                if _F4B_STASH is None:
+                    # F4b: [64 rows, top-64] int32 + device version counter.
+                    # 64 rows = the INT8 head's B cap; C1 uses 4 (MTP3+bonus).
+                    _F4B_STASH = {
+                        "top64": torch.zeros(
+                            64, 64, dtype=torch.int32, device=wref.device
+                        ),
+                        "ver": torch.zeros(1, dtype=torch.int64, device=wref.device),
+                    }
             if self._int8_w is not None:
                 try:
                     return self._int8_apply_head(lm_head, hidden_states)

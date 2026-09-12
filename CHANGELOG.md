@@ -1018,3 +1018,35 @@ code C1 61.2 -> 66.2; C4/C8 stable at ~101/130 sustained with zero dips.
 Everything shipped is in the fork (9 commits today) with the reproduction
 recipe in .env.sample and relaunch.sh.
 
+## 2026-09-12 (morning, campaign day 2) — Marlin atomic-add REJECTED; F4b ported
+
+- Upstream check: NO new commits on fork or MiaAI-Lab upstream, NO new
+  qwen38-flash-next Docker Hub image since 08-26 — no free upstream drops this
+  window.
+- Prefix-cache #53504 probe: cold 5308-tok prefill 4.11s → repeat 0.51s (~8x).
+  Caching works on first repeat on our stack (the 53388 mounts cover it);
+  community item closed with evidence.
+- `VLLM_MARLIN_USE_ATOMIC_ADD=1` (boot-log hint for the drafter's small-n
+  MARLIN GEMMs): A/B vs same-boot reference (ref C1 56.3 / C4 124.0 / C8
+  182.1) → arm C1 51.4 (**−8.7%**), C4 119.3 (−3.8%), C8 186.7 (+2.5%, within
+  noise). REJECTED with receipts — hurts exactly where the drafter dominates
+  (C1). Acceptance 0.822/0.671/0.500 (within variance of 0.849/0.674/0.511).
+- relaunch.sh hygiene: alloc-tuning envs (`expandable_segments`,
+  `MALLOC_ARENA_MAX=2`) now gated behind `ALLOC_TUNING=1` so A/B arms booted
+  from the script stay single-variable vs the standing stack.
+- **F4b ported** (target-logits-seeded draft sampling — the corrected F4a):
+  files/logits_processor.py gains a module-global `_F4B_STASH` (verify top-64
+  rows [64,64] int32 + int64 device version counter, written inside the
+  captured verify graph via in-place ops only); files/mtp_patched_topk.py
+  get_top_tokens gains a step-0 branch that reads the frontier row
+  (i*(K+1)+K, request-major) of the stash, maps target→slice ids via a
+  prebuilt int32 table, rescores the 64 candidates with exact BF16 row dots,
+  and masks outside-slice ids to −inf. Steps 1+ unchanged (INT8 full-slice).
+  Provably acceptance-neutral-or-better at temp-0 (an unrestricted-accepted
+  draft pick is the target argmax = stash rank 0, inside the set). Gated:
+  `VLLM_F4B=1` (+ `VLLM_F4B_STEPS`/`VLLM_F4B_BLOCK` knobs). AST-verified
+  in-image; gather/mask semantics smoke-tested (outside-slice tokens can
+  never be picked). Byte math: replaces the step-0 65k-row INT8 slice GEMV
+  (0.156 GiB) with a 64-row gather + exact rescore (~5 MiB) — ~0.15 GiB/cycle
+  saved if acceptance-neutral. A/B pending boot.
+

@@ -42,8 +42,7 @@ CMD=(docker run -d --name "$CONTAINER_NAME"
   -e VLLM_PLE_PACKED_TABLE_DIR=/root/.cache/vllm/ple_cache/Mia-AiLab--Qwen3.8-Flash-Next-NVFP4
   -e VLLM_PLE_OFFLOAD_STEP_TIMEOUT=300
   -e VLLM_USE_V2_MODEL_RUNNER=1
-  -e PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
-  -e MALLOC_ARENA_MAX=2
+  ${ALLOC_TUNING:+-e PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True -e MALLOC_ARENA_MAX=2}
   -e VLLM_MTP_DRAFT_VOCAB=/root/draft_vocab.txt
   -v "$DRAFT_VOCAB:/root/draft_vocab.txt:ro"
   -e HF_HOME=/root/.cache/huggingface
