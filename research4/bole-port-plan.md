@@ -3,6 +3,20 @@
 **Date:** 2026-09-12 · **Scope:** read-only research; no service/container touched.
 **Our stack:** vLLM `0.1.dev20073+g8e685d198` (fork), `qwen3_8_flash_next` (36 GDN linear-attn + 12 QSA layers, ~105B A48 MoE NVFP4, vocab 248,320 × hidden 2,560), MTP=3 argmax temp-0, chain speculation, C1 prose 55.8 tok/s (goal 80).
 
+> **REVISION 2026-09-13 (after live profiling, see research4/profile-final-stack.md):**
+> The kernel half of this plan is OBSOLETE for our stack. vLLM's fused GDN
+> decode path (`gdn_decode_post_conv_mtp_kernel` + causal-conv update) costs
+> only 1.2% of GPU time — Bole's "86% state materialization" is an SGLang
+> number and does not transfer. DO NOT PORT the factorized-verification
+> kernel / Neumann-solve / factorized-state machinery.
+> What remains valuable is the TREE ALGORITHM: §2's tree drafter (native MTP
+> head, per-round top-k=4 depth-8 tree scored by cumulative draft prob),
+> batch-wide selection under a calibrated budget, and chain→tree verify
+> plumbing (tree mask / token map in the V1 rejection sampler). Expected win
+> = acceptance-length 2.98 → 3.5-4 class (+18-35% tok/s) at near-unchanged
+> verify cost. Effort: the vLLM V1 rejection sampler has NO tree-mask path
+> (§3) — that plumbing is the bulk of the port, all SGLang-side analogs in §2.
+
 ## TL;DR
 
 - Bole is a **kernel–runtime co-design for tree speculation on hybrid-attention (GDN) models**, integrated into **SGLang v0.5.12**, not vLLM. **No public code repo exists** (searched GitHub, SGLang PRs, HF papers page → 404/0 hits). Implementation is ~6.2 kLoC of Python + Triton per the paper, unreleased. Port = **reimplementation from the paper's math**, not a vendor drop.
