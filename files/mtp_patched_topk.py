@@ -669,8 +669,10 @@ class Qwen3_8FlashNextMTP(nn.Module, SupportsPP, Qwen3_8FlashNextMixtureOfExpert
                     except Exception:
                         stash = None
                     tits = stash.get("tits") if stash is not None else None
+                    B0, H0 = hidden_states.shape
+                    if stash is not None and tits is not None and tits.numel() != B0:
+                        tits = None  # piecewise threads batch differently
                     if stash is not None and tits is not None:
-                        B0, H0 = hidden_states.shape
                         Kp1 = blk  # num_spec + 1 sampled rows per request
                         # tits[i] indexes the verify-logits row block: for a
                         # spec step it points at request i's frontier row
