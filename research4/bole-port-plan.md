@@ -120,3 +120,37 @@ Suggested order: **6 → 1 → 5 (chain-compatible tree of depth 3, verify as se
 - vLLM V1 spec-decode layout: https://github.com/vllm-project/vllm/tree/main/vllm/v1/spec_decode · https://github.com/vllm-project/vllm/tree/main/vllm/v1/worker/gpu/spec_decode · https://github.com/vllm-project/vllm/blob/main/vllm/v1/sample/rejection_sampler.py · https://github.com/vllm-project/vllm/blob/main/vllm/v1/attention/backends/gdn_attn.py · https://github.com/vllm-project/vllm/tree/main/vllm/model_executor/layers/mamba/ops/gdn_chunk_cutedsl
 - Greedy-divergence precedent on our model family: https://github.com/vllm-project/vllm/issues/54928
 - Repo/PR non-existence checks (0 results each, 2026-09-12): GitHub search API `bole tree speculation hybrid`, `bole speculative linear-attention`, `repo:sgl-project/sglang bole type:pr`; HF papers page 404.
+
+
+## FEASIBILITY MAP ADDENDUM (Hermes, 2026-09-13 06:35 — from image source dive)
+
+Live-image evidence for the tree port, component by component:
+
+1. **GDN recurrent kernel** (`vllm/third_party/flash_linear_attention/ops/fused_sigmoid_gating.py`,
+   kernel ~lines 95-175): the spec path IS continuous-batching + snapshot capable:
+   - per-position state SAVE slots: `ssm_state_indices[i_n, i_t]` ("keep the
+     states for multi-query tokens") — arbitrary slot ids per position;
+   - rollback: initial state slot = `ssm_state_indices[i_n, num_accepted-1]`.
+   BUT the recurrence is strictly linear (p_q advances by fixed stride; one
+   running state b_h) — sibling branches cannot start from a parent snapshot.
+   Tree needs a separate `initial_state_indices` arg (start-state slot per
+   cu_seqlens group) — an S-class Triton edit to this one kernel.
+2. **GDN metadata builder** (`v1/attention/backends/gdn_attn.py:300-345`):
+   already builds `spec_state_indices_tensor = block_table[spec_rows, :num_spec+1]`
+   — a 2-D per-request/per-position slot table with variable `cu_seqlens`.
+   Tree shapes (multiple short groups per request) fit this structure.
+3. **QSA full-attention layers** (`models/qwen3_8_flash_next/nvidia/ops/qsa.py`):
+   spec handling exists (spec_sequence_masks per-sequence bool + split
+   index_select), but NO per-token tree mask — tree verify needs a custom-mask
+   attention path here (M-class; FA/flashinfer custom-mask support in V1 is
+   the thing to check).
+4. **Rejection sampler** (`v1/sample/rejection_sampler.py`): chain-only; tree
+   accept/commit logic must be added (the largest single piece, M-L).
+5. **Drafter**: our MTP head already produces per-step top-k (F4b stash
+   reuses verify top-64); Bole's tree expansion (top-k=4, depth≤8, cumulative
+   prob scoring, batch-wide budget selection) is new proposer code (M).
+
+Revised effort: GDN kernel edit S + metadata S + QSA mask M + sampler M-L +
+proposer M ≈ multi-day, same L-class total as before, but now with the
+critical GDN unknown RESOLVED (the snapshot machinery exists and is live in
+our stack today for the chain case — acceptance rollback uses it every step).
