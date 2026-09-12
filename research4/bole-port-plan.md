@@ -154,3 +154,42 @@ Revised effort: GDN kernel edit S + metadata S + QSA mask M + sampler M-L +
 proposer M ≈ multi-day, same L-class total as before, but now with the
 critical GDN unknown RESOLVED (the snapshot machinery exists and is live in
 our stack today for the chain case — acceptance rollback uses it every step).
+
+
+## STEP-1/2 RESULTS (Hermes, 2026-09-13 06:45 — hardware-proven)
+
+**Step 1 — GDN tree kernel: DONE, PROVEN.** `f4b/fused_sigmoid_gating_tree.py`
+= stock + `initial_state_indices` [N] per-group start-state slots (7 edit
+sites, env-free arg-presence gating). Correctness test (`f4b/tree_kernel_test.py`,
+real dims HV=48 K=V=128 shrunk to HV=4 for memory): two sibling groups from
+the SAME parent slot == their chain equivalents, max-diff 0.0 / 4.97e-3 (bf16
+noise); per-position snapshots land correctly. This unlocks tree verification
+in the GDN layers with a single-file mount.
+
+**Step 2 — kernel-level tree cost at C1 (real dims HV=48, K=V=128):**
+`f4b/tree_kernel_bench.py`, all groups start from slot 0 (worst-case parent):
+
+| shape | kernel time |
+|---|---|
+| CHAIN today (1 grp x 4 rows) | 49.1 us |
+| TREE 4 grp x 2 rows | 150.6 us |
+| TREE 8 grp x 1 row | 130.0 us |
+| TREE 8 grp x 2 rows | 292.9 us |
+
+Per-GDN-layer decode cost today is ~227us total for the fused op (live
+profile: 256ms/13824 launches) — the recurrent update is the small part
+(~49us of it). A depth-2 fanout-4 tree adds ~100us x 36 layers = ~3.6ms per
+verify (vs ~60ms cycle) = **+6% cycle cost for the GDN side of tree verify**.
+That is cheap IF the MoE/dense side (the 75% that amortizes perfectly)
+dominates — which the profile says it does. Acceptance 2.98 -> 3.5+ would
+give +17-20% tokens/cycle => net positive ~+10-14% C1 even at fanout-4.
+Fanout-8 costs +244us/layer (+8.8ms/cycle, +15%) — only worth it if
+acceptance scales past ~4.2.
+
+**Remaining port steps (unchanged order):**
+3. Metadata builder: emit per-group cu_seqlens/init_idx for tree verify rows
+   (the builder's spec_state_indices path already handles 2-D slots; needs
+   init-slot column pass-through). S-M.
+4. QSA tree masking via indexer top-k exclusion (sparse-paged; M).
+5. Rejection sampler tree accept/commit (M-L, the bulk).
+6. Proposer: Bole-style tree expansion from MTP head top-k (M).
