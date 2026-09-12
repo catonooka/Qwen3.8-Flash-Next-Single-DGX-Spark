@@ -173,3 +173,19 @@ Baseline 55.8 tok/s C1 prose; goal 80 (+43%). Gains below are per-action estimat
 - Action #3 is the live one: drafter runs EAGER under FULL_DECODE_ONLY
   (verified in llm_base_proposer.py:429-436 — eagle_cudagraph_mode=NONE).
   Config-only probe queued.
+
+## LOCAL VERIFICATION RESULTS (Hermes, 2026-09-12 11:20)
+
+- HC-mixer headroom claim REJECTED on-box: hc_bench.py with real shapes
+  (down [16,10240]x[320,10240], up [4,320]x[10240,320]) reads BF16 at
+  293-497 GB/s — the weights are L2-resident; there is no bandwidth headroom
+  for skinny/INT8 plans there (0.32-0.48x for INT8). Bucket 2's remaining
+  realistic slice is only the M=4 MTP-mixer shapes, est <1%.
+- Piecewise-drafter (action 3) probed and closed for today: V2 runner
+  rejects torch.compile outright; on V1 runner our F4b guard crashed
+  (tits.numel() != hidden rows under piecewise threading) and warmup C1
+  read 31.3. Hardening committed (a5a8aac); retry criteria banked.
+- Net: actions 1, 2, 3 all closed or reduced to <1% on this box today.
+  Remaining live levers: 4 (draft-head Triton row-GEMV, +3-6% claim,
+  unverified), 5 (GDN decode via CuTe-DSL, M-effort), then L-class (Bole,
+  Minima NVFP4-dense). The 80-tps goal needs the L-class moves.
