@@ -193,3 +193,36 @@ acceptance scales past ~4.2.
 4. QSA tree masking via indexer top-k exclusion (sparse-paged; M).
 5. Rejection sampler tree accept/commit (M-L, the bulk).
 6. Proposer: Bole-style tree expansion from MTP head top-k (M).
+
+
+## PORT STATUS (Hermes, 2026-09-13 06:43)
+
+Proven on hardware, in-repo:
+- STEP 1 GDN tree kernel (f4b/fused_sigmoid_gating_tree.py) — sibling branch
+  from shared parent slot == chain reference. DONE.
+- STEP 2 cost model at real dims (f4b/tree_kernel_bench.py) — fanout-4/depth-2
+  tree = +6% cycle GDN-side. DONE.
+- STEP 5-CORE tree greedy sampler (f4b/tree_sampler.py) — Triton kernel,
+  ancestor-chain accept, path+bonus emit, matches CPU reference on 2 cases.
+  DONE as prototype.
+
+Remaining integration (the M-L bulk, next session):
+- STEP 3 metadata: emit per-group cu_seqlens + init slots for tree verify
+  (gdn_attn.py build() already 90% there — needs an init-slot column).
+- STEP 4 QSA tree masking: sparse-paged indexer currently selects top-k KV
+  per token; tree needs ancestor-only enforcement. Approach: indexer feeds
+  per-token allowed-KV mask via topk_indices_buffer (the buffer exists,
+  layer-provided) — needs a per-node ancestor-position list from the
+  proposer, same shape as today's top-k. M.
+- STEP 5-INTEGRATE: wire tree_greedy_sample into RejectionSampler.forward
+  behind an env flag (greedy path only; random path stays chain) + provide
+  parent/depth arrays from SpecDecodeMetadata. M.
+- STEP 6 proposer: MTP-head tree expansion (top-k=4 depth 2-3, cumulative
+  draft-prob scoring, fixed node budget per request to keep capture sizes
+  stable). M. The F4b stash infrastructure (module-global, capture-safe) is
+  reusable for passing tree topology.
+E2E estimate if acceptance 2.98 -> 3.6: C1 55 -> ~65-68. To 80 needs
+fanout-8 or depth-4 AND the +6% GDN cost to stay flat — measure first.
+
+Discipline reminder: single-file mounts only, env-gated, bench_lock,
+discard-first-bench, quality gates before any standing change.
