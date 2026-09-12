@@ -1148,3 +1148,31 @@ recipe in .env.sample and relaunch.sh.
   GB10-native evidence, port plan in research4/bole-port-plan.md) and
   Minima NVFP4-dense (L). 11 commits day-2 (5fa216a..d603ed0).
 
+ ## 2026-09-13 (day-3) — live profile: memory floor reached; Bole plan re-scoped to tree-algorithm-only
+
+ - Piecewise-drafter re-probe with the hardened F4b guard: guard FIX WORKS
+ (no crash) but the arm REJECTED conclusively — C1 31 (−43%), C4 58-96,
+ C8 139-143, and acceptance itself collapses (0.570/0.420/0.329 vs
+ 0.88/0.68/0.49). The V1-runner draft threading hurts the drafter far more
+ than the eager overhead it saves. Lane dead until V2 supports torch.compile.
+ - 32k draft-vocab slice: CLOSED by tokenizer coverage arithmetic — 32k covers
+ 80.0% of EN prose but only 30.2% of Vietnamese (65k: 98-100%). Outside-slice
+ proposals would crater acceptance on VI text. trimix_65k stays.
+ - **Live torch-profiler capture on the final stack** (research4/
+ profile-final-stack.md, 161 MB trace, 6.12M events): GPU-busy **93%** at
+ C1 — the engine is at its memory floor; eager-draft CPU overhead ≤7%
+ (bucket 5 closed). Decomposition: MoE NVFP4 grouped GEMM 28.6% / dense
+ MXFP8 25.1% (already quantized) / WMMA bf16 small-N 14.1% (L2-resident,
+ closed) / INT8 heads 9.0% (81% of bus, at floor) / skinny CuTe 7.2% /
+ **GDN fused state 1.2%**.
+ - **Bole plan re-scoped**: the paper's kernel work is unnecessary for us
+ (vLLM's fused GDN path already solved state materialization — the 86%
+ figure is SGLang-specific). What remains is the TREE ALGORITHM
+ (acceptance 2.98 → 3.5-4 class). Feasibility map from image sources:
+ GDN snapshot/rollback machinery already live (per-position state slots +
+ num_accepted rollback); tree needs an S-class `initial_state_indices`
+ kernel edit; QSA is sparse-paged (mask via index control, M); rejection
+ sampler is chain-only (M-L, the bulk). At C1's bandwidth-bound profile,
+ doubling acceptance ≈ +60-80% throughput — the only lever of that size.
+ - Day-3 commits: 69c37ec (piecewise rejected) → 7f24480 (feasibility map).
+
