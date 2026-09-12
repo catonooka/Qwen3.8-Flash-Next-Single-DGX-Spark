@@ -656,7 +656,11 @@ class Qwen3_8FlashNextMTP(nn.Module, SupportsPP, Qwen3_8FlashNextMixtureOfExpert
             blk = getattr(self, "_f4b_block", 0)
             if blk:
                 self._f4b_call = getattr(self, "_f4b_call", 0) + 1
-                if (self._f4b_call - 1) % blk == 0:  # step 0 of this draft block
+                # engage on step 0 of each draft block: get_top_tokens is
+                # called num_spec (3) times per cycle — modulo must be the
+                # STEP COUNT, not K+1 (blk), or the phase rotates through
+                # steps 1-2 and restricts them with a one-position-stale set.
+                if (self._f4b_call - 1) % self._f4b_steps == 0:  # step 0
                     try:
                         from vllm.model_executor.layers.logits_processor import (
                             _f4b_stash_get,

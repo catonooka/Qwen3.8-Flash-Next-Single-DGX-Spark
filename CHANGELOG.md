@@ -1048,5 +1048,26 @@ recipe in .env.sample and relaunch.sh.
   in-image; gather/mask semantics smoke-tested (outside-slice tokens can
   never be picked). Byte math: replaces the step-0 65k-row INT8 slice GEMV
   (0.156 GiB) with a 64-row gather + exact rescore (~5 MiB) — ~0.15 GiB/cycle
-  saved if acceptance-neutral. A/B pending boot.
+  saved if acceptance-neutral.
+
+### F4b A/B verdict (09:04-09:11): REJECTED — wrong seed row
+
+- Boot clean (F4b/INT8/65k markers live), but C1 36.7 (**−35%**), C4 87.1
+  (−30%), C8 182.2 (flat), acceptance 0.137/0.080/0.029 (vs 0.849/0.674/0.511)
+  — the step-0 seed set is simply wrong at runtime.
+- Root cause (measured + re-derived): `token_indices_to_sample` (eagle_prepare_
+  inputs_padded_kernel) = q_last_tok_idx − num_rejected — the verify row the
+  drafter samples from is acceptance-aware, while my fixed bonus-row pick
+  (i*(K+1)+K) is only correct on full-accept cycles (C1). On partial-accept
+  cycles the bonus row is the distribution AFTER the last accepted token —
+  seeding the NEXT cycle's step 0 with it is off-by-one-position, and the
+  error compounds every cycle (observed 0.85 → 0.14, far worse than the
+  neutral-or-better proof assumed).
+- The proof stays valid ONLY for the correctly-selected row. Fixing needs the
+  real two-file port: stash ALL verify rows + `_sample_draft_tokens` threads
+  `token_indices_to_sample` into the seed read. Banked in f4a/PORT_NOTES.md
+  section 2; single-row shortcut REJECTED with receipts.
+- Standing restored after (same mount set minus VLLM_F4B); this boot also
+  serves as the day-2 control for the two edited files (VLLM_F4B unset = new
+  code dead-path; INT8 markers should re-appear, acceptance ~0.85/0.67/0.51).
 
