@@ -1077,3 +1077,25 @@ recipe in .env.sample and relaunch.sh.
   evidence is the acceptance collapse (0.137/0.080/0.029 vs 0.849/0.674/0.511),
   which is algorithmic and warmup-immune, not the tps delta.
 
+### F4b v2 A/B + gates (09:39-10:04): SHIPPED as standing
+
+- v2 = the correct two-file(+1) port: proposer threads the acceptance-aware
+  `token_indices_to_sample` into the stash each propose(); draft step-0 picks
+  rows = tits (guarded by `rows_dev` — the replay-safe row-count of the last
+  head call; B*(K+1) verify / B prefill / else unrestricted fallback).
+- Warm protocol (first bench after health discarded): C1 55.1 / C4 125.2 /
+  **C8 190.1**; C8 confirmed ×4 reps (190.1/177.5/189.4/188.7, median 189 vs
+  standing 179-182 today). C1/C4 neutral, acceptance 0.837-0.841/0.651-0.656/
+  0.474-0.485 (unchanged). Mechanism: at B=32 the step-0 INT8 slice topk
+  (top-32 of 65536 across 32 rows) is real sort work; v2 replaces it with a
+  64-row gather + exact rescore. C4@12 rows falls back (unrestricted) by the
+  engagement map — that width gains nothing but loses nothing.
+- Gates: needles 2/3 (same 5% terse-format artifact as unpatched boots),
+  reasoning 11/11, garble clean, greedy 9/20 byte-identical (ABOVE the 2/20
+  same-boot control — no signal). SHIPPED.
+- relaunch.sh default stack updated: mtp_patched_topk + gate_linear +
+  logits_processor + llm_base_proposer mounts + INT8 both heads + VLLM_F4B=1
+  (dry-run verified). Current running container = identical config (launched
+  with explicit overrides), so it IS the new standing without a reboot.
+- C8 soak on the shipped stack: see soak_results.jsonl (f4b-standing-c8).
+

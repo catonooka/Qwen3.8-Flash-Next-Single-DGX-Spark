@@ -22,7 +22,7 @@ cd /home/nmt/flashnext-spark
 
 IMAGE="${IMAGE:-vllm-skinny-tp1:v1-spinfix}"
 CONTAINER_NAME="${CONTAINER_NAME:-vllm-fn-ab1}"
-MTP_FILE="${MTP_FILE:-/home/nmt/flashnext-spark/files/mtp_patched.py}"
+MTP_FILE="${MTP_FILE:-/home/nmt/flashnext-spark/files/mtp_patched_topk.py}"
 DRAFT_VOCAB="${DRAFT_VOCAB:-/home/nmt/.cache/vllm/draft_vocab/trimix_fill_65k.txt}"
 EXTRA="${EXTRA_VLLM_ARGS:-}"
 EXTRA_DOCKER="${EXTRA_DOCKER:-}"
@@ -53,6 +53,12 @@ CMD=(docker run -d --name "$CONTAINER_NAME"
   -v /home/nmt/flashnext-spark/files/qsa_ops_patched.py:$V/models/qwen3_8_flash_next/nvidia/ops/qsa.py:ro
   -v /home/nmt/flashnext-spark/files/qsa_nvidia_patched.py:$V/models/qwen3_8_flash_next/nvidia/qsa.py:ro
   -v "$MTP_FILE:$V/models/qwen3_8_flash_next/nvidia/mtp.py:ro"
+  -v /home/nmt/flashnext-spark/files/gate_linear.py:$V/model_executor/layers/fused_moe/router/gate_linear.py:ro
+  -v /home/nmt/flashnext-spark/files/logits_processor.py:$V/model_executor/layers/logits_processor.py:ro
+  -v /home/nmt/flashnext-spark/f4b/llm_base_proposer.py:$V/v1/spec_decode/llm_base_proposer.py:ro
+  -e VLLM_INT8_VERIFY_HEAD=1
+  -e VLLM_INT8_DRAFT_HEAD=1
+  -e VLLM_F4B=1
   -v /home/nmt/flashnext-spark/files/ple_offload/ple_offload_layer.py:$V/model_executor/layers/ple_offload_layer.py:ro
   -v /home/nmt/flashnext-spark/files/ple_offload/connector.py:$V/v1/ple_offload/connector.py:ro
   -v /home/nmt/flashnext-spark/files/ple_offload/worker.py:$V/v1/ple_offload/worker.py:ro
