@@ -1,0 +1,562 @@
+{
+  "_metadata": {
+    "flashinfer_version": "0.6.17",
+    "cuda_version": "13.0",
+    "cublas_version": "13.1.1",
+    "cudnn_version": "92000",
+    "cudnn_frontend_version": "1.27.0",
+    "gpu": "NVIDIA GB10"
+  },
+  "('mxfp8_gemm', 'CutlassMxfp8GemmRunner', ((1, 2560), (2560, 1280), (-1,), (102400,), (0,), (-1, 1280), (33554432,)), ())": [
+    "CutlassMxfp8GemmRunner",
+    1
+  ],
+  "('mxfp8_gemm', 'CutlassMxfp8GemmRunner', ((1, 2560), (2560, 13312), (-1,), (1064960,), (0,), (-1, 13312), (33554432,)), ())": [
+    "CutlassMxfp8GemmRunner",
+    1
+  ],
+  "('mxfp8_gemm', 'CutlassMxfp8GemmRunner', ((1, 2560), (2560, 16384), (-1,), (1310720,), (0,), (-1, 16384), (33554432,)), ())": [
+    "CutlassMxfp8GemmRunner",
+    4
+  ],
+  "('mxfp8_gemm', 'CutlassMxfp8GemmRunner', ((1, 2560), (2560, 640), (-1,), (51200,), (0,), (-1, 640), (33554432,)), ())": [
+    "CutlassMxfp8GemmRunner",
+    1
+  ],
+  "('mxfp8_gemm', 'CutlassMxfp8GemmRunner', ((1, 6144), (6144, 2560), (-1,), (491520,), (0,), (-1, 2560), (33554432,)), ())": [
+    "CutlassMxfp8GemmRunner",
+    1
+  ],
+  "('mxfp8_gemm', 'CutlassMxfp8GemmRunner', ((1, 640), (640, 2560), (-1,), (51200,), (0,), (-1, 2560), (33554432,)), ())": [
+    "CutlassMxfp8GemmRunner",
+    3
+  ],
+  "('mxfp8_gemm', 'CutlassMxfp8GemmRunner', ((1024, 2560), (2560, 1280), (-1,), (102400,), (0,), (-1, 1280), (33554432,)), ())": [
+    "CutlassMxfp8GemmRunner",
+    4
+  ],
+  "('mxfp8_gemm', 'CutlassMxfp8GemmRunner', ((1024, 2560), (2560, 13312), (-1,), (1064960,), (0,), (-1, 13312), (33554432,)), ())": [
+    "CutlassMxfp8GemmRunner",
+    5
+  ],
+  "('mxfp8_gemm', 'CutlassMxfp8GemmRunner', ((1024, 2560), (2560, 16384), (-1,), (1310720,), (0,), (-1, 16384), (33554432,)), ())": [
+    "CutlassMxfp8GemmRunner",
+    4
+  ],
+  "('mxfp8_gemm', 'CutlassMxfp8GemmRunner', ((1024, 2560), (2560, 640), (-1,), (51200,), (0,), (-1, 640), (33554432,)), ())": [
+    "CutlassMxfp8GemmRunner",
+    4
+  ],
+  "('mxfp8_gemm', 'CutlassMxfp8GemmRunner', ((1024, 6144), (6144, 2560), (-1,), (491520,), (0,), (-1, 2560), (33554432,)), ())": [
+    "CutlassMxfp8GemmRunner",
+    5
+  ],
+  "('mxfp8_gemm', 'CutlassMxfp8GemmRunner', ((1024, 640), (640, 2560), (-1,), (51200,), (0,), (-1, 2560), (33554432,)), ())": [
+    "CutlassMxfp8GemmRunner",
+    2
+  ],
+  "('mxfp8_gemm', 'CutlassMxfp8GemmRunner', ((128, 2560), (2560, 1280), (-1,), (102400,), (0,), (-1, 1280), (33554432,)), ())": [
+    "CutlassMxfp8GemmRunner",
+    3
+  ],
+  "('mxfp8_gemm', 'CutlassMxfp8GemmRunner', ((128, 2560), (2560, 13312), (-1,), (1064960,), (0,), (-1, 13312), (33554432,)), ())": [
+    "CutlassMxfp8GemmRunner",
+    1
+  ],
+  "('mxfp8_gemm', 'CutlassMxfp8GemmRunner', ((128, 2560), (2560, 16384), (-1,), (1310720,), (0,), (-1, 16384), (33554432,)), ())": [
+    "CutlassMxfp8GemmRunner",
+    0
+  ],
+  "('mxfp8_gemm', 'CutlassMxfp8GemmRunner', ((128, 2560), (2560, 640), (-1,), (51200,), (0,), (-1, 640), (33554432,)), ())": [
+    "CutlassMxfp8GemmRunner",
+    1
+  ],
+  "('mxfp8_gemm', 'CutlassMxfp8GemmRunner', ((128, 6144), (6144, 2560), (-1,), (491520,), (0,), (-1, 2560), (33554432,)), ())": [
+    "CutlassMxfp8GemmRunner",
+    2
+  ],
+  "('mxfp8_gemm', 'CutlassMxfp8GemmRunner', ((128, 640), (640, 2560), (-1,), (51200,), (0,), (-1, 2560), (33554432,)), ())": [
+    "CutlassMxfp8GemmRunner",
+    1
+  ],
+  "('mxfp8_gemm', 'CutlassMxfp8GemmRunner', ((1280, 2560), (2560, 1280), (-1,), (102400,), (0,), (-1, 1280), (33554432,)), ())": [
+    "CutlassMxfp8GemmRunner",
+    3
+  ],
+  "('mxfp8_gemm', 'CutlassMxfp8GemmRunner', ((1280, 2560), (2560, 13312), (-1,), (1064960,), (0,), (-1, 13312), (33554432,)), ())": [
+    "CutlassMxfp8GemmRunner",
+    5
+  ],
+  "('mxfp8_gemm', 'CutlassMxfp8GemmRunner', ((1280, 2560), (2560, 16384), (-1,), (1310720,), (0,), (-1, 16384), (33554432,)), ())": [
+    "CutlassMxfp8GemmRunner",
+    5
+  ],
+  "('mxfp8_gemm', 'CutlassMxfp8GemmRunner', ((1280, 2560), (2560, 640), (-1,), (51200,), (0,), (-1, 640), (33554432,)), ())": [
+    "CutlassMxfp8GemmRunner",
+    3
+  ],
+  "('mxfp8_gemm', 'CutlassMxfp8GemmRunner', ((1280, 6144), (6144, 2560), (-1,), (491520,), (0,), (-1, 2560), (33554432,)), ())": [
+    "CutlassMxfp8GemmRunner",
+    5
+  ],
+  "('mxfp8_gemm', 'CutlassMxfp8GemmRunner', ((1280, 640), (640, 2560), (-1,), (51200,), (0,), (-1, 2560), (33554432,)), ())": [
+    "CutlassMxfp8GemmRunner",
+    2
+  ],
+  "('mxfp8_gemm', 'CutlassMxfp8GemmRunner', ((1536, 2560), (2560, 1280), (-1,), (102400,), (0,), (-1, 1280), (33554432,)), ())": [
+    "CutlassMxfp8GemmRunner",
+    5
+  ],
+  "('mxfp8_gemm', 'CutlassMxfp8GemmRunner', ((1536, 2560), (2560, 13312), (-1,), (1064960,), (0,), (-1, 13312), (33554432,)), ())": [
+    "CutlassMxfp8GemmRunner",
+    5
+  ],
+  "('mxfp8_gemm', 'CutlassMxfp8GemmRunner', ((1536, 2560), (2560, 16384), (-1,), (1310720,), (0,), (-1, 16384), (33554432,)), ())": [
+    "CutlassMxfp8GemmRunner",
+    5
+  ],
+  "('mxfp8_gemm', 'CutlassMxfp8GemmRunner', ((1536, 2560), (2560, 640), (-1,), (51200,), (0,), (-1, 640), (33554432,)), ())": [
+    "CutlassMxfp8GemmRunner",
+    3
+  ],
+  "('mxfp8_gemm', 'CutlassMxfp8GemmRunner', ((1536, 6144), (6144, 2560), (-1,), (491520,), (0,), (-1, 2560), (33554432,)), ())": [
+    "CutlassMxfp8GemmRunner",
+    5
+  ],
+  "('mxfp8_gemm', 'CutlassMxfp8GemmRunner', ((1536, 640), (640, 2560), (-1,), (51200,), (0,), (-1, 2560), (33554432,)), ())": [
+    "CutlassMxfp8GemmRunner",
+    4
+  ],
+  "('mxfp8_gemm', 'CutlassMxfp8GemmRunner', ((16, 2560), (2560, 1280), (-1,), (102400,), (0,), (-1, 1280), (33554432,)), ())": [
+    "CutlassMxfp8GemmRunner",
+    1
+  ],
+  "('mxfp8_gemm', 'CutlassMxfp8GemmRunner', ((16, 2560), (2560, 13312), (-1,), (1064960,), (0,), (-1, 13312), (33554432,)), ())": [
+    "CutlassMxfp8GemmRunner",
+    1
+  ],
+  "('mxfp8_gemm', 'CutlassMxfp8GemmRunner', ((16, 2560), (2560, 16384), (-1,), (1310720,), (0,), (-1, 16384), (33554432,)), ())": [
+    "CutlassMxfp8GemmRunner",
+    1
+  ],
+  "('mxfp8_gemm', 'CutlassMxfp8GemmRunner', ((16, 2560), (2560, 640), (-1,), (51200,), (0,), (-1, 640), (33554432,)), ())": [
+    "CutlassMxfp8GemmRunner",
+    1
+  ],
+  "('mxfp8_gemm', 'CutlassMxfp8GemmRunner', ((16, 6144), (6144, 2560), (-1,), (491520,), (0,), (-1, 2560), (33554432,)), ())": [
+    "CutlassMxfp8GemmRunner",
+    1
+  ],
+  "('mxfp8_gemm', 'CutlassMxfp8GemmRunner', ((16, 640), (640, 2560), (-1,), (51200,), (0,), (-1, 2560), (33554432,)), ())": [
+    "CutlassMxfp8GemmRunner",
+    1
+  ],
+  "('mxfp8_gemm', 'CutlassMxfp8GemmRunner', ((1792, 2560), (2560, 1280), (-1,), (102400,), (0,), (-1, 1280), (33554432,)), ())": [
+    "CutlassMxfp8GemmRunner",
+    4
+  ],
+  "('mxfp8_gemm', 'CutlassMxfp8GemmRunner', ((1792, 2560), (2560, 13312), (-1,), (1064960,), (0,), (-1, 13312), (33554432,)), ())": [
+    "CutlassMxfp8GemmRunner",
+    4
+  ],
+  "('mxfp8_gemm', 'CutlassMxfp8GemmRunner', ((1792, 2560), (2560, 16384), (-1,), (1310720,), (0,), (-1, 16384), (33554432,)), ())": [
+    "CutlassMxfp8GemmRunner",
+    5
+  ],
+  "('mxfp8_gemm', 'CutlassMxfp8GemmRunner', ((1792, 2560), (2560, 640), (-1,), (51200,), (0,), (-1, 640), (33554432,)), ())": [
+    "CutlassMxfp8GemmRunner",
+    3
+  ],
+  "('mxfp8_gemm', 'CutlassMxfp8GemmRunner', ((1792, 6144), (6144, 2560), (-1,), (491520,), (0,), (-1, 2560), (33554432,)), ())": [
+    "CutlassMxfp8GemmRunner",
+    4
+  ],
+  "('mxfp8_gemm', 'CutlassMxfp8GemmRunner', ((1792, 640), (640, 2560), (-1,), (51200,), (0,), (-1, 2560), (33554432,)), ())": [
+    "CutlassMxfp8GemmRunner",
+    5
+  ],
+  "('mxfp8_gemm', 'CutlassMxfp8GemmRunner', ((2, 2560), (2560, 1280), (-1,), (102400,), (0,), (-1, 1280), (33554432,)), ())": [
+    "CutlassMxfp8GemmRunner",
+    1
+  ],
+  "('mxfp8_gemm', 'CutlassMxfp8GemmRunner', ((2, 2560), (2560, 13312), (-1,), (1064960,), (0,), (-1, 13312), (33554432,)), ())": [
+    "CutlassMxfp8GemmRunner",
+    1
+  ],
+  "('mxfp8_gemm', 'CutlassMxfp8GemmRunner', ((2, 2560), (2560, 16384), (-1,), (1310720,), (0,), (-1, 16384), (33554432,)), ())": [
+    "CutlassMxfp8GemmRunner",
+    1
+  ],
+  "('mxfp8_gemm', 'CutlassMxfp8GemmRunner', ((2, 2560), (2560, 640), (-1,), (51200,), (0,), (-1, 640), (33554432,)), ())": [
+    "CutlassMxfp8GemmRunner",
+    1
+  ],
+  "('mxfp8_gemm', 'CutlassMxfp8GemmRunner', ((2, 6144), (6144, 2560), (-1,), (491520,), (0,), (-1, 2560), (33554432,)), ())": [
+    "CutlassMxfp8GemmRunner",
+    1
+  ],
+  "('mxfp8_gemm', 'CutlassMxfp8GemmRunner', ((2, 640), (640, 2560), (-1,), (51200,), (0,), (-1, 2560), (33554432,)), ())": [
+    "CutlassMxfp8GemmRunner",
+    3
+  ],
+  "('mxfp8_gemm', 'CutlassMxfp8GemmRunner', ((2048, 2560), (2560, 1280), (-1,), (102400,), (0,), (-1, 1280), (33554432,)), ())": [
+    "CutlassMxfp8GemmRunner",
+    5
+  ],
+  "('mxfp8_gemm', 'CutlassMxfp8GemmRunner', ((2048, 2560), (2560, 13312), (-1,), (1064960,), (0,), (-1, 13312), (33554432,)), ())": [
+    "CutlassMxfp8GemmRunner",
+    5
+  ],
+  "('mxfp8_gemm', 'CutlassMxfp8GemmRunner', ((2048, 2560), (2560, 16384), (-1,), (1310720,), (0,), (-1, 16384), (33554432,)), ())": [
+    "CutlassMxfp8GemmRunner",
+    5
+  ],
+  "('mxfp8_gemm', 'CutlassMxfp8GemmRunner', ((2048, 2560), (2560, 640), (-1,), (51200,), (0,), (-1, 640), (33554432,)), ())": [
+    "CutlassMxfp8GemmRunner",
+    5
+  ],
+  "('mxfp8_gemm', 'CutlassMxfp8GemmRunner', ((2048, 6144), (6144, 2560), (-1,), (491520,), (0,), (-1, 2560), (33554432,)), ())": [
+    "CutlassMxfp8GemmRunner",
+    4
+  ],
+  "('mxfp8_gemm', 'CutlassMxfp8GemmRunner', ((2048, 640), (640, 2560), (-1,), (51200,), (0,), (-1, 2560), (33554432,)), ())": [
+    "CutlassMxfp8GemmRunner",
+    5
+  ],
+  "('mxfp8_gemm', 'CutlassMxfp8GemmRunner', ((256, 2560), (2560, 1280), (-1,), (102400,), (0,), (-1, 1280), (33554432,)), ())": [
+    "CutlassMxfp8GemmRunner",
+    3
+  ],
+  "('mxfp8_gemm', 'CutlassMxfp8GemmRunner', ((256, 2560), (2560, 13312), (-1,), (1064960,), (0,), (-1, 13312), (33554432,)), ())": [
+    "CutlassMxfp8GemmRunner",
+    2
+  ],
+  "('mxfp8_gemm', 'CutlassMxfp8GemmRunner', ((256, 2560), (2560, 16384), (-1,), (1310720,), (0,), (-1, 16384), (33554432,)), ())": [
+    "CutlassMxfp8GemmRunner",
+    2
+  ],
+  "('mxfp8_gemm', 'CutlassMxfp8GemmRunner', ((256, 2560), (2560, 640), (-1,), (51200,), (0,), (-1, 640), (33554432,)), ())": [
+    "CutlassMxfp8GemmRunner",
+    1
+  ],
+  "('mxfp8_gemm', 'CutlassMxfp8GemmRunner', ((256, 6144), (6144, 2560), (-1,), (491520,), (0,), (-1, 2560), (33554432,)), ())": [
+    "CutlassMxfp8GemmRunner",
+    5
+  ],
+  "('mxfp8_gemm', 'CutlassMxfp8GemmRunner', ((256, 640), (640, 2560), (-1,), (51200,), (0,), (-1, 2560), (33554432,)), ())": [
+    "CutlassMxfp8GemmRunner",
+    5
+  ],
+  "('mxfp8_gemm', 'CutlassMxfp8GemmRunner', ((32, 2560), (2560, 1280), (-1,), (102400,), (0,), (-1, 1280), (33554432,)), ())": [
+    "CutlassMxfp8GemmRunner",
+    1
+  ],
+  "('mxfp8_gemm', 'CutlassMxfp8GemmRunner', ((32, 2560), (2560, 13312), (-1,), (1064960,), (0,), (-1, 13312), (33554432,)), ())": [
+    "CutlassMxfp8GemmRunner",
+    1
+  ],
+  "('mxfp8_gemm', 'CutlassMxfp8GemmRunner', ((32, 2560), (2560, 16384), (-1,), (1310720,), (0,), (-1, 16384), (33554432,)), ())": [
+    "CutlassMxfp8GemmRunner",
+    1
+  ],
+  "('mxfp8_gemm', 'CutlassMxfp8GemmRunner', ((32, 2560), (2560, 640), (-1,), (51200,), (0,), (-1, 640), (33554432,)), ())": [
+    "CutlassMxfp8GemmRunner",
+    1
+  ],
+  "('mxfp8_gemm', 'CutlassMxfp8GemmRunner', ((32, 6144), (6144, 2560), (-1,), (491520,), (0,), (-1, 2560), (33554432,)), ())": [
+    "CutlassMxfp8GemmRunner",
+    1
+  ],
+  "('mxfp8_gemm', 'CutlassMxfp8GemmRunner', ((32, 640), (640, 2560), (-1,), (51200,), (0,), (-1, 2560), (33554432,)), ())": [
+    "CutlassMxfp8GemmRunner",
+    1
+  ],
+  "('mxfp8_gemm', 'CutlassMxfp8GemmRunner', ((4, 2560), (2560, 1280), (-1,), (102400,), (0,), (-1, 1280), (33554432,)), ())": [
+    "CutlassMxfp8GemmRunner",
+    1
+  ],
+  "('mxfp8_gemm', 'CutlassMxfp8GemmRunner', ((4, 2560), (2560, 13312), (-1,), (1064960,), (0,), (-1, 13312), (33554432,)), ())": [
+    "CutlassMxfp8GemmRunner",
+    3
+  ],
+  "('mxfp8_gemm', 'CutlassMxfp8GemmRunner', ((4, 2560), (2560, 16384), (-1,), (1310720,), (0,), (-1, 16384), (33554432,)), ())": [
+    "CutlassMxfp8GemmRunner",
+    3
+  ],
+  "('mxfp8_gemm', 'CutlassMxfp8GemmRunner', ((4, 2560), (2560, 640), (-1,), (51200,), (0,), (-1, 640), (33554432,)), ())": [
+    "CutlassMxfp8GemmRunner",
+    1
+  ],
+  "('mxfp8_gemm', 'CutlassMxfp8GemmRunner', ((4, 6144), (6144, 2560), (-1,), (491520,), (0,), (-1, 2560), (33554432,)), ())": [
+    "CutlassMxfp8GemmRunner",
+    1
+  ],
+  "('mxfp8_gemm', 'CutlassMxfp8GemmRunner', ((4, 640), (640, 2560), (-1,), (51200,), (0,), (-1, 2560), (33554432,)), ())": [
+    "CutlassMxfp8GemmRunner",
+    1
+  ],
+  "('mxfp8_gemm', 'CutlassMxfp8GemmRunner', ((512, 2560), (2560, 1280), (-1,), (102400,), (0,), (-1, 1280), (33554432,)), ())": [
+    "CutlassMxfp8GemmRunner",
+    4
+  ],
+  "('mxfp8_gemm', 'CutlassMxfp8GemmRunner', ((512, 2560), (2560, 13312), (-1,), (1064960,), (0,), (-1, 13312), (33554432,)), ())": [
+    "CutlassMxfp8GemmRunner",
+    5
+  ],
+  "('mxfp8_gemm', 'CutlassMxfp8GemmRunner', ((512, 2560), (2560, 16384), (-1,), (1310720,), (0,), (-1, 16384), (33554432,)), ())": [
+    "CutlassMxfp8GemmRunner",
+    5
+  ],
+  "('mxfp8_gemm', 'CutlassMxfp8GemmRunner', ((512, 2560), (2560, 640), (-1,), (51200,), (0,), (-1, 640), (33554432,)), ())": [
+    "CutlassMxfp8GemmRunner",
+    2
+  ],
+  "('mxfp8_gemm', 'CutlassMxfp8GemmRunner', ((512, 6144), (6144, 2560), (-1,), (491520,), (0,), (-1, 2560), (33554432,)), ())": [
+    "CutlassMxfp8GemmRunner",
+    4
+  ],
+  "('mxfp8_gemm', 'CutlassMxfp8GemmRunner', ((512, 640), (640, 2560), (-1,), (51200,), (0,), (-1, 2560), (33554432,)), ())": [
+    "CutlassMxfp8GemmRunner",
+    4
+  ],
+  "('mxfp8_gemm', 'CutlassMxfp8GemmRunner', ((64, 2560), (2560, 1280), (-1,), (102400,), (0,), (-1, 1280), (33554432,)), ())": [
+    "CutlassMxfp8GemmRunner",
+    1
+  ],
+  "('mxfp8_gemm', 'CutlassMxfp8GemmRunner', ((64, 2560), (2560, 13312), (-1,), (1064960,), (0,), (-1, 13312), (33554432,)), ())": [
+    "CutlassMxfp8GemmRunner",
+    0
+  ],
+  "('mxfp8_gemm', 'CutlassMxfp8GemmRunner', ((64, 2560), (2560, 16384), (-1,), (1310720,), (0,), (-1, 16384), (33554432,)), ())": [
+    "CutlassMxfp8GemmRunner",
+    0
+  ],
+  "('mxfp8_gemm', 'CutlassMxfp8GemmRunner', ((64, 2560), (2560, 640), (-1,), (51200,), (0,), (-1, 640), (33554432,)), ())": [
+    "CutlassMxfp8GemmRunner",
+    1
+  ],
+  "('mxfp8_gemm', 'CutlassMxfp8GemmRunner', ((64, 6144), (6144, 2560), (-1,), (491520,), (0,), (-1, 2560), (33554432,)), ())": [
+    "CutlassMxfp8GemmRunner",
+    1
+  ],
+  "('mxfp8_gemm', 'CutlassMxfp8GemmRunner', ((64, 640), (640, 2560), (-1,), (51200,), (0,), (-1, 2560), (33554432,)), ())": [
+    "CutlassMxfp8GemmRunner",
+    4
+  ],
+  "('mxfp8_gemm', 'CutlassMxfp8GemmRunner', ((768, 2560), (2560, 1280), (-1,), (102400,), (0,), (-1, 1280), (33554432,)), ())": [
+    "CutlassMxfp8GemmRunner",
+    2
+  ],
+  "('mxfp8_gemm', 'CutlassMxfp8GemmRunner', ((768, 2560), (2560, 13312), (-1,), (1064960,), (0,), (-1, 13312), (33554432,)), ())": [
+    "CutlassMxfp8GemmRunner",
+    5
+  ],
+  "('mxfp8_gemm', 'CutlassMxfp8GemmRunner', ((768, 2560), (2560, 16384), (-1,), (1310720,), (0,), (-1, 16384), (33554432,)), ())": [
+    "CutlassMxfp8GemmRunner",
+    5
+  ],
+  "('mxfp8_gemm', 'CutlassMxfp8GemmRunner', ((768, 2560), (2560, 640), (-1,), (51200,), (0,), (-1, 640), (33554432,)), ())": [
+    "CutlassMxfp8GemmRunner",
+    5
+  ],
+  "('mxfp8_gemm', 'CutlassMxfp8GemmRunner', ((768, 6144), (6144, 2560), (-1,), (491520,), (0,), (-1, 2560), (33554432,)), ())": [
+    "CutlassMxfp8GemmRunner",
+    4
+  ],
+  "('mxfp8_gemm', 'CutlassMxfp8GemmRunner', ((768, 640), (640, 2560), (-1,), (51200,), (0,), (-1, 2560), (33554432,)), ())": [
+    "CutlassMxfp8GemmRunner",
+    5
+  ],
+  "('mxfp8_gemm', 'CutlassMxfp8GemmRunner', ((8, 2560), (2560, 1280), (-1,), (102400,), (0,), (-1, 1280), (33554432,)), ())": [
+    "CutlassMxfp8GemmRunner",
+    1
+  ],
+  "('mxfp8_gemm', 'CutlassMxfp8GemmRunner', ((8, 2560), (2560, 13312), (-1,), (1064960,), (0,), (-1, 13312), (33554432,)), ())": [
+    "CutlassMxfp8GemmRunner",
+    1
+  ],
+  "('mxfp8_gemm', 'CutlassMxfp8GemmRunner', ((8, 2560), (2560, 16384), (-1,), (1310720,), (0,), (-1, 16384), (33554432,)), ())": [
+    "CutlassMxfp8GemmRunner",
+    1
+  ],
+  "('mxfp8_gemm', 'CutlassMxfp8GemmRunner', ((8, 2560), (2560, 640), (-1,), (51200,), (0,), (-1, 640), (33554432,)), ())": [
+    "CutlassMxfp8GemmRunner",
+    1
+  ],
+  "('mxfp8_gemm', 'CutlassMxfp8GemmRunner', ((8, 6144), (6144, 2560), (-1,), (491520,), (0,), (-1, 2560), (33554432,)), ())": [
+    "CutlassMxfp8GemmRunner",
+    1
+  ],
+  "('mxfp8_gemm', 'CutlassMxfp8GemmRunner', ((8, 640), (640, 2560), (-1,), (51200,), (0,), (-1, 2560), (33554432,)), ())": [
+    "CutlassMxfp8GemmRunner",
+    1
+  ],
+  "('trtllm::fused_moe::gemm1', 'MoERunner', ((1, 1280), (512, 1280, 160), (0,), (512, 2560, 40), (0,)), ())": [
+    "MoERunner",
+    16
+  ],
+  "('trtllm::fused_moe::gemm1', 'MoERunner', ((1024, 1280), (512, 1280, 160), (0,), (512, 2560, 40), (0,)), ())": [
+    "MoERunner",
+    18
+  ],
+  "('trtllm::fused_moe::gemm1', 'MoERunner', ((128, 1280), (512, 1280, 160), (0,), (512, 2560, 40), (0,)), ())": [
+    "MoERunner",
+    18
+  ],
+  "('trtllm::fused_moe::gemm1', 'MoERunner', ((1280, 1280), (512, 1280, 160), (0,), (512, 2560, 40), (0,)), ())": [
+    "MoERunner",
+    18
+  ],
+  "('trtllm::fused_moe::gemm1', 'MoERunner', ((1536, 1280), (512, 1280, 160), (0,), (512, 2560, 40), (0,)), ())": [
+    "MoERunner",
+    18
+  ],
+  "('trtllm::fused_moe::gemm1', 'MoERunner', ((16, 1280), (512, 1280, 160), (0,), (512, 2560, 40), (0,)), ())": [
+    "MoERunner",
+    16
+  ],
+  "('trtllm::fused_moe::gemm1', 'MoERunner', ((1792, 1280), (512, 1280, 160), (0,), (512, 2560, 40), (0,)), ())": [
+    "MoERunner",
+    18
+  ],
+  "('trtllm::fused_moe::gemm1', 'MoERunner', ((2, 1280), (512, 1280, 160), (0,), (512, 2560, 40), (0,)), ())": [
+    "MoERunner",
+    16
+  ],
+  "('trtllm::fused_moe::gemm1', 'MoERunner', ((2048, 1280), (512, 1280, 160), (0,), (512, 2560, 40), (0,)), ())": [
+    "MoERunner",
+    18
+  ],
+  "('trtllm::fused_moe::gemm1', 'MoERunner', ((256, 1280), (512, 1280, 160), (0,), (512, 2560, 40), (0,)), ())": [
+    "MoERunner",
+    18
+  ],
+  "('trtllm::fused_moe::gemm1', 'MoERunner', ((2560, 1280), (512, 1280, 160), (0,), (512, 2560, 40), (0,)), ())": [
+    "MoERunner",
+    18
+  ],
+  "('trtllm::fused_moe::gemm1', 'MoERunner', ((3072, 1280), (512, 1280, 160), (0,), (512, 2560, 40), (0,)), ())": [
+    "MoERunner",
+    8
+  ],
+  "('trtllm::fused_moe::gemm1', 'MoERunner', ((32, 1280), (512, 1280, 160), (0,), (512, 2560, 40), (0,)), ())": [
+    "MoERunner",
+    16
+  ],
+  "('trtllm::fused_moe::gemm1', 'MoERunner', ((3584, 1280), (512, 1280, 160), (0,), (512, 2560, 40), (0,)), ())": [
+    "MoERunner",
+    18
+  ],
+  "('trtllm::fused_moe::gemm1', 'MoERunner', ((4, 1280), (512, 1280, 160), (0,), (512, 2560, 40), (0,)), ())": [
+    "MoERunner",
+    19
+  ],
+  "('trtllm::fused_moe::gemm1', 'MoERunner', ((4096, 1280), (512, 1280, 160), (0,), (512, 2560, 40), (0,)), ())": [
+    "MoERunner",
+    18
+  ],
+  "('trtllm::fused_moe::gemm1', 'MoERunner', ((512, 1280), (512, 1280, 160), (0,), (512, 2560, 40), (0,)), ())": [
+    "MoERunner",
+    18
+  ],
+  "('trtllm::fused_moe::gemm1', 'MoERunner', ((64, 1280), (512, 1280, 160), (0,), (512, 2560, 40), (0,)), ())": [
+    "MoERunner",
+    18
+  ],
+  "('trtllm::fused_moe::gemm1', 'MoERunner', ((768, 1280), (512, 1280, 160), (0,), (512, 2560, 40), (0,)), ())": [
+    "MoERunner",
+    18
+  ],
+  "('trtllm::fused_moe::gemm1', 'MoERunner', ((8, 1280), (512, 1280, 160), (0,), (512, 2560, 40), (0,)), ())": [
+    "MoERunner",
+    16
+  ],
+  "('trtllm::fused_moe::gemm1', 'MoERunner', ((8192, 1280), (512, 1280, 160), (0,), (512, 2560, 40), (0,)), ())": [
+    "MoERunner",
+    18
+  ],
+  "('trtllm::fused_moe::gemm2', 'MoERunner', ((1, 1280), (512, 1280, 160), (0,), (512, 2560, 40), (0,)), ())": [
+    "MoERunner",
+    57
+  ],
+  "('trtllm::fused_moe::gemm2', 'MoERunner', ((1024, 1280), (512, 1280, 160), (0,), (512, 2560, 40), (0,)), ())": [
+    "MoERunner",
+    57
+  ],
+  "('trtllm::fused_moe::gemm2', 'MoERunner', ((128, 1280), (512, 1280, 160), (0,), (512, 2560, 40), (0,)), ())": [
+    "MoERunner",
+    59
+  ],
+  "('trtllm::fused_moe::gemm2', 'MoERunner', ((1280, 1280), (512, 1280, 160), (0,), (512, 2560, 40), (0,)), ())": [
+    "MoERunner",
+    59
+  ],
+  "('trtllm::fused_moe::gemm2', 'MoERunner', ((1536, 1280), (512, 1280, 160), (0,), (512, 2560, 40), (0,)), ())": [
+    "MoERunner",
+    59
+  ],
+  "('trtllm::fused_moe::gemm2', 'MoERunner', ((16, 1280), (512, 1280, 160), (0,), (512, 2560, 40), (0,)), ())": [
+    "MoERunner",
+    56
+  ],
+  "('trtllm::fused_moe::gemm2', 'MoERunner', ((1792, 1280), (512, 1280, 160), (0,), (512, 2560, 40), (0,)), ())": [
+    "MoERunner",
+    59
+  ],
+  "('trtllm::fused_moe::gemm2', 'MoERunner', ((2, 1280), (512, 1280, 160), (0,), (512, 2560, 40), (0,)), ())": [
+    "MoERunner",
+    57
+  ],
+  "('trtllm::fused_moe::gemm2', 'MoERunner', ((2048, 1280), (512, 1280, 160), (0,), (512, 2560, 40), (0,)), ())": [
+    "MoERunner",
+    59
+  ],
+  "('trtllm::fused_moe::gemm2', 'MoERunner', ((256, 1280), (512, 1280, 160), (0,), (512, 2560, 40), (0,)), ())": [
+    "MoERunner",
+    59
+  ],
+  "('trtllm::fused_moe::gemm2', 'MoERunner', ((2560, 1280), (512, 1280, 160), (0,), (512, 2560, 40), (0,)), ())": [
+    "MoERunner",
+    58
+  ],
+  "('trtllm::fused_moe::gemm2', 'MoERunner', ((3072, 1280), (512, 1280, 160), (0,), (512, 2560, 40), (0,)), ())": [
+    "MoERunner",
+    59
+  ],
+  "('trtllm::fused_moe::gemm2', 'MoERunner', ((32, 1280), (512, 1280, 160), (0,), (512, 2560, 40), (0,)), ())": [
+    "MoERunner",
+    56
+  ],
+  "('trtllm::fused_moe::gemm2', 'MoERunner', ((3584, 1280), (512, 1280, 160), (0,), (512, 2560, 40), (0,)), ())": [
+    "MoERunner",
+    50
+  ],
+  "('trtllm::fused_moe::gemm2', 'MoERunner', ((4, 1280), (512, 1280, 160), (0,), (512, 2560, 40), (0,)), ())": [
+    "MoERunner",
+    59
+  ],
+  "('trtllm::fused_moe::gemm2', 'MoERunner', ((4096, 1280), (512, 1280, 160), (0,), (512, 2560, 40), (0,)), ())": [
+    "MoERunner",
+    59
+  ],
+  "('trtllm::fused_moe::gemm2', 'MoERunner', ((512, 1280), (512, 1280, 160), (0,), (512, 2560, 40), (0,)), ())": [
+    "MoERunner",
+    57
+  ],
+  "('trtllm::fused_moe::gemm2', 'MoERunner', ((64, 1280), (512, 1280, 160), (0,), (512, 2560, 40), (0,)), ())": [
+    "MoERunner",
+    57
+  ],
+  "('trtllm::fused_moe::gemm2', 'MoERunner', ((768, 1280), (512, 1280, 160), (0,), (512, 2560, 40), (0,)), ())": [
+    "MoERunner",
+    56
+  ],
+  "('trtllm::fused_moe::gemm2', 'MoERunner', ((8, 1280), (512, 1280, 160), (0,), (512, 2560, 40), (0,)), ())": [
+    "MoERunner",
+    57
+  ],
+  "('trtllm::fused_moe::gemm2', 'MoERunner', ((8192, 1280), (512, 1280, 160), (0,), (512, 2560, 40), (0,)), ())": [
+    "MoERunner",
+    58
+  ]
+}

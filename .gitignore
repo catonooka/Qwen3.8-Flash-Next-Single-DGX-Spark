@@ -71,6 +71,7 @@
 !/research4/arxiv-techniques.md
 !/research4/community-github.md
 !/research4/cuda-system.md
+!/research4/tactics-121a-*.json
 !/s3/slice53388.py
 !/s3/out53388/vllm/config/speculative.py
 !/s3/out53388/vllm/v1/core/kv_cache_utils.py
