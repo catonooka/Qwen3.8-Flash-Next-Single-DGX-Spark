@@ -1027,10 +1027,13 @@ recipe in .env.sample and relaunch.sh.
   Caching works on first repeat on our stack (the 53388 mounts cover it);
   community item closed with evidence.
 - `VLLM_MARLIN_USE_ATOMIC_ADD=1` (boot-log hint for the drafter's small-n
-  MARLIN GEMMs): A/B vs same-boot reference (ref C1 56.3 / C4 124.0 / C8
-  182.1) → arm C1 51.4 (**−8.7%**), C4 119.3 (−3.8%), C8 186.7 (+2.5%, within
-  noise). REJECTED with receipts — hurts exactly where the drafter dominates
-  (C1). Acceptance 0.822/0.671/0.500 (within variance of 0.849/0.674/0.511).
+  MARLIN GEMMs): arm read C1 51.4 / C4 119.3 / C8 186.7 vs same-morning ref
+  C1 56.3 / C4 124.0 / C8 182.1. **Verdict RETRACTED to INCONCLUSIVE** — the
+  standing control boot (09:22, flag OFF) reads the same 51.4 on its first
+  post-health bench, and 54.6 warm 3 min later: fresh-boot first-bench is
+  ~4-5 tok/s low (JIT warmup). Any future re-test of this flag must discard
+  the first bench after health and compare warm-vs-warm. Not adopted; cheap
+  to re-run under the corrected protocol if ever needed.
 - relaunch.sh hygiene: alloc-tuning envs (`expandable_segments`,
   `MALLOC_ARENA_MAX=2`) now gated behind `ALLOC_TUNING=1` so A/B arms booted
   from the script stay single-variable vs the standing stack.
@@ -1070,4 +1073,7 @@ recipe in .env.sample and relaunch.sh.
 - Standing restored after (same mount set minus VLLM_F4B); this boot also
   serves as the day-2 control for the two edited files (VLLM_F4B unset = new
   code dead-path; INT8 markers should re-appear, acceptance ~0.85/0.67/0.51).
+- Note (post-warmup-artifact discovery): the v1 rejection STANDS — its
+  evidence is the acceptance collapse (0.137/0.080/0.029 vs 0.849/0.674/0.511),
+  which is algorithmic and warmup-immune, not the tps delta.
 

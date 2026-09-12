@@ -646,13 +646,12 @@ class Qwen3_8FlashNextMTP(nn.Module, SupportsPP, Qwen3_8FlashNextMixtureOfExpert
             return self.logits_processor.get_top_tokens(self.lm_head, hidden_states)
         i8w = getattr(self, "_draft_i8_weight", None)
         if i8w is not None and hidden_states.dim() == 2:
-            # F4b step-0 (fork 2026-09-12): restrict this draft argmax to the
-            # TARGET's top-64 candidate set at the frontier, stashed by the
-            # verify pass (module-global in logits_processor). Acceptance is
-            # provably >= unrestricted at temp-0: if the draft's global argmax
-            # would be accepted it IS the target argmax (stash rank 0, inside
-            # the set), so the restricted pick is identical; otherwise the
-            # restricted pick at least has a chance. Steps 1+ run unrestricted.
+            # F4b v2 step-0 (fork 2026-09-12): restrict this draft argmax to the
+            # TARGET's top-64 candidate set at the frontier, using the
+            # ACCEPTANCE-AWARE row index (token_indices_to_sample) threaded by
+            # the proposer. v1's fixed bonus-row pick was wrong on every
+            # partial-accept cycle (see CHANGELOG 09-12). Guarded by a device
+            # row-count check so mixed steps/paddings fall back to INT8.
             blk = getattr(self, "_f4b_block", 0)
             if blk:
                 self._f4b_call = getattr(self, "_f4b_call", 0) + 1
@@ -669,26 +668,39 @@ class Qwen3_8FlashNextMTP(nn.Module, SupportsPP, Qwen3_8FlashNextMixtureOfExpert
                         stash = _f4b_stash_get()
                     except Exception:
                         stash = None
-                    if stash is not None:
-                        Kp1 = blk  # num_spec + 1 sampled rows per request
+                    tits = stash.get("tits") if stash is not None else None
+                    if stash is not None and tits is not None:
                         B0, H0 = hidden_states.shape
-                        # request i's frontier row = i*(K+1)+K (request-major,
-                        # real requests first; padded tail rows are dummies)
-                        rr = (
-                            torch.arange(B0, device=hidden_states.device) * Kp1
-                            + (Kp1 - 1)
-                        ).clamp_(max=stash["top64"].shape[0] - 1)
-                        cands = stash["top64"][rr].long()  # [B0, 64] target ids
-                        d = self._f4b_t2d[cands]  # [B0, 64] slice ids, -1=outside
-                        safe = d.clamp(min=0)  # static-shape gather
-                        w_k = weight[safe.reshape(-1)].view(B0, 64, H0)
-                        hh = hidden_states.unsqueeze(1).expand(-1, 64, -1)
-                        exact = torch.einsum("bkh,bkh->bk", hh.float(), w_k.float())
-                        exact = exact.masked_fill(d < 0, float("-inf"))
-                        pick = cands.gather(
-                            1, exact.argmax(dim=-1, keepdim=True)
-                        ).squeeze(1)
-                        return pick.to(torch.long)
+                        Kp1 = blk  # num_spec + 1 sampled rows per request
+                        # tits[i] indexes the verify-logits row block: for a
+                        # spec step it points at request i's frontier row
+                        # within [0, B*(K+1)); for a prefill step it is a
+                        # query_start_loc-derived row in [0, B). The step kind
+                        # is recoverable from the row count of the last head
+                        # call: B*(K+1) after verify, B after prefill (padded
+                        # capture widths keep this exact for real batches).
+                        nrows = stash["rows_dev"]  # [1] int64
+                        nrows_v = int(nrows.item())
+                        if nrows_v == B0 * Kp1 and B0 * Kp1 <= stash["top64"].shape[0]:
+                            rr = tits.to(torch.long).clamp(0, nrows_v - 1)
+                        elif nrows_v == B0 and B0 <= stash["top64"].shape[0]:
+                            rr = tits.to(torch.long).clamp(0, B0 - 1)
+                        else:
+                            rr = None  # mixed/padded step — unrestricted
+                        if rr is not None:
+                            cands = stash["top64"][rr].long()  # [B0, 64] target ids
+                            d = self._f4b_t2d[cands]  # [B0, 64] slice ids, -1=out
+                            safe = d.clamp(min=0)  # static-shape gather
+                            w_k = weight[safe.reshape(-1)].view(B0, 64, H0)
+                            hh = hidden_states.unsqueeze(1).expand(-1, 64, -1)
+                            exact = torch.einsum(
+                                "bkh,bkh->bk", hh.float(), w_k.float()
+                            )
+                            exact = exact.masked_fill(d < 0, float("-inf"))
+                            pick = cands.gather(
+                                1, exact.argmax(dim=-1, keepdim=True)
+                            ).squeeze(1)
+                            return pick.to(torch.long)
             # INT8 slice screen + exact top-32 rescore. Drafts only affect
             # acceptance, and the rescored argmax is exact for the picked row.
             B, H = hidden_states.shape

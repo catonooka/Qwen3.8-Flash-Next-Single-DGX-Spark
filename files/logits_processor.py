@@ -29,6 +29,24 @@ def _f4b_stash_get() -> dict | None:
     return _F4B_STASH if _F4B_STASH is not None else None
 
 
+def _f4b_init_stash(device) -> None:
+    """Build the global stash (device tensors only; safe to read any time)."""
+    global _F4B_STASH
+    if _F4B_STASH is None:
+        _F4B_STASH = {
+            # [64 rows, top-64] int32 verify/prefill topk per sampled row
+            "top64": torch.zeros(64, 64, dtype=torch.int32, device=device),
+            # monotone version counter (device tensor, in-place add in graph)
+            "ver": torch.zeros(1, dtype=torch.int64, device=device),
+            # number of logits rows computed by the LAST head call (captured
+            # fill_ = constant per replay; re-derived at every eager call)
+            "rows_dev": torch.zeros(1, dtype=torch.int64, device=device),
+            # acceptance-aware per-request sample rows (written eagerly by the
+            # proposer's propose(); [B] int, indexes into "top64" rows)
+            "tits": None,
+        }
+
+
 # --8<-- [start:logits_processor]
 @PluggableLayer.register("logits_processor")
 class LogitsProcessor(PluggableLayer):
@@ -121,6 +139,7 @@ class LogitsProcessor(PluggableLayer):
             Bcur = min(B, stash["top64"].shape[0])
             stash["top64"][:Bcur].copy_(top.indices[:Bcur].to(torch.int32))
             stash["ver"] += 1
+            stash["rows_dev"].fill_(B)
         return logits.to(hidden_states.dtype)
 
     def forward(
@@ -181,16 +200,7 @@ class LogitsProcessor(PluggableLayer):
                     .to(torch.int8)
                 ).contiguous()
                 self._int8_w, self._int8_scale, self._int8_bf = w8, scale, wref
-                global _F4B_STASH
-                if _F4B_STASH is None:
-                    # F4b: [64 rows, top-64] int32 + device version counter.
-                    # 64 rows = the INT8 head's B cap; C1 uses 4 (MTP3+bonus).
-                    _F4B_STASH = {
-                        "top64": torch.zeros(
-                            64, 64, dtype=torch.int32, device=wref.device
-                        ),
-                        "ver": torch.zeros(1, dtype=torch.int64, device=wref.device),
-                    }
+                _f4b_init_stash(wref.device)
             if self._int8_w is not None:
                 try:
                     return self._int8_apply_head(lm_head, hidden_states)
