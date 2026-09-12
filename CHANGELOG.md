@@ -1040,6 +1040,17 @@ recipe in .env.sample and relaunch.sh.
   −4.9% — it eats the F4b C8 gain). Acceptance 0.829/0.625/0.469. The
   atomic-add hint is a loss for our drafter shapes at every width that
   matters; closed with clean data.
+- **Drafter piecewise-graph probe 11:00-11:17: lane CLOSED for today** with
+  two findings: (1) `mode:1 + FULL_AND_PIECEWISE` is INCOMPATIBLE with the
+  V2 model runner ("Model Runner V2 does not yet support: stock
+  torch.compile") — forcing V1 runner makes the probe two-variable;
+  (2) under piecewise the proposer calls `_greedy_sample` with mismatched
+  shapes (tits 1-elem vs hidden 4-row) → our F4b branch crashes at
+  mtp.py:694 (`view(4,64,2560)` on 64 gathered rows). Warmup C1 read 31.3
+  (V1 runner prefill penalty visible). Hardening for the next attempt is
+  specified: add `tits.numel() == B0` to the F4b guard, then re-run on V1
+  runner and compare decode-only. The 3-8 ms/cycle eager-draft overhead
+  estimate stands (bucket 5, research4/profiled-cost-reduction.md).
 - relaunch.sh hygiene: alloc-tuning envs (`expandable_segments`,
   `MALLOC_ARENA_MAX=2`) now gated behind `ALLOC_TUNING=1` so A/B arms booted
   from the script stay single-variable vs the standing stack.
