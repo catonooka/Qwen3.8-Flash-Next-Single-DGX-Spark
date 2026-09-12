@@ -1034,6 +1034,12 @@ recipe in .env.sample and relaunch.sh.
   ~4-5 tok/s low (JIT warmup). Any future re-test of this flag must discard
   the first bench after health and compare warm-vs-warm. Not adopted; cheap
   to re-run under the corrected protocol if ever needed.
+- **Marlin re-test 10:37-10:41 (warm protocol, on the F4b stack, 2 reps):
+  FINAL — REJECTED.** C1 53.4/52.0 (mean 52.7 vs standing 54.0, −2.4%), C4
+  123.6/131.5 (127.6 vs 125.2, +1.9% noise), C8 181.9/177.7 (179.8 vs 189,
+  −4.9% — it eats the F4b C8 gain). Acceptance 0.829/0.625/0.469. The
+  atomic-add hint is a loss for our drafter shapes at every width that
+  matters; closed with clean data.
 - relaunch.sh hygiene: alloc-tuning envs (`expandable_segments`,
   `MALLOC_ARENA_MAX=2`) now gated behind `ALLOC_TUNING=1` so A/B arms booted
   from the script stay single-variable vs the standing stack.
