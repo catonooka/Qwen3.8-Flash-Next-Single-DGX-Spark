@@ -965,3 +965,27 @@ Standing stack now: spinfix image + ablit + trimix_fill_65k draft vocab + MTP3
 Engine prose: C1 49.8 / C4 121.5 / C8 181.4. E2E prose C1 35.4.
 C4 soak (pre-INT8 stack): mean 98.3, p95 124.4, 0 dips/30 min. C8: 129.5 mean, 0 dips/20 min.
 
+
+## 2026-09-12 (final) — INT8 DRAFT head stacked on INT8 verify head: NEW STANDING
+
+C1 prose engine 48.0 -> 55.8 tok/s (+16.2%), e2e 33.9 -> 37.3 (+10.0%), with
+acceptance IDENTICAL (0.849/0.674/0.511 vs 0.85/0.63/0.47 baseline class) and
+C4/C8 neutral (122.6/179.4). Gates: reasoning 11/11, garble-clean, sanity
+exact ("9 sheep"), needles 2/3 (5% terse-format artifact, same signature as the
+no-patch spinfix boot).
+
+Mechanism: the MTP drafter's 65,536-row BF16 slice GEMV (0.312 GiB, 3x per
+MTP-3 cycle) now runs per-row INT8 (0.156 GiB) with an exact top-32 BF16 rescore
+(files/mtp_patched_topk.py, env VLLM_INT8_DRAFT_HEAD=1). Draft tokens only
+affect acceptance; the rescore makes the picked draft argmax exact over the
+screened set, and measured acceptance confirms zero loss.
+
+Stack: spinfix + ablit + trimix_fill_65k + MTP3 + 50729/53388 + #54048 +
+INT8 verify head + INT8 draft head + LPI-1/2/3 off.
+Launch lanes documented in .env.sample; relaunch.sh reproduces in one command.
+
+Road to 80 (honest): +16% today stacks with nothing else free; the remaining
+C1 gap needs Bole-style tree verify (GB10-native evidence), MonoMoE persistent
+MoE kernels, or the target-logits-seeded F4a (draft acceptance lift). All
+banked in research4/ + CAMPAIGN_NOTES with port-effort estimates.
+

@@ -106,6 +106,29 @@ def _attach_draft_vocab(model: nn.Module) -> None:
         index.to(torch.int32),
         persistent=False,
     )
+    # INT8 draft head (fork 2026-09-12): the slice GEMV runs 3x per MTP-3
+    # cycle (0.335 GiB BF16 each). A per-row INT8 copy halves the read; the
+    # argmax then gets an exact top-32 BF16 rescore over the slice rows.
+    # Draft tokens only affect acceptance (greedy verify decides output), and
+    # INT8 per-row noise (1.25e-4 sigma) is far below draft decision margins.
+    try:
+        d8 = int(os.environ.get("VLLM_INT8_DRAFT_HEAD", "0").strip() or 0)
+    except ValueError:
+        d8 = 0
+    if d8 > 0:
+        sw = model._draft_lm_head_weight  # [S, H] bf16
+        s8_scale = (sw.abs().amax(dim=1).float() / 127.0).contiguous()
+        s8 = (
+            (sw.float() / s8_scale[:, None]).round().clamp(-127, 127)
+            .to(torch.int8)
+        ).contiguous()
+        model.register_buffer("_draft_i8_weight", s8, persistent=False)
+        model.register_buffer("_draft_i8_scale", s8_scale, persistent=False)
+        logger.info(
+            "MTP draft INT8 head: enabled; slice GEMV %.3f -> %.3f GiB per draft step",
+            sw.numel() * sw.element_size() / 2**30,
+            s8.numel() / 2**30,
+        )
     full_gib = weight.numel() * weight.element_size() / 2**30
     cut_gib = model._draft_lm_head_weight.numel() * weight.element_size() / 2**30
     try:
@@ -599,6 +622,30 @@ class Qwen3_8FlashNextMTP(nn.Module, SupportsPP, Qwen3_8FlashNextMixtureOfExpert
         weight = getattr(self, "_draft_lm_head_weight", None)
         if weight is None:
             return self.logits_processor.get_top_tokens(self.lm_head, hidden_states)
+        i8w = getattr(self, "_draft_i8_weight", None)
+        if i8w is not None and hidden_states.dim() == 2:
+            # INT8 slice screen + exact top-32 rescore. Drafts only affect
+            # acceptance, and the rescored argmax is exact for the picked row.
+            B, H = hidden_states.shape
+            hf = hidden_states.float()
+            ascale = hf.abs().amax(dim=1, keepdim=True) / 127.0
+            hi8 = (hf / ascale).round().clamp(-127, 127).to(torch.int8)
+            PAD = max(32, B + (-B % 32))
+            if PAD != B:
+                hi8p = torch.zeros(PAD, H, device=hi8.device, dtype=torch.int8)
+                hi8p[:B] = hi8
+                ascp = torch.ones(PAD, 1, device=hi8.device, dtype=ascale.dtype)
+                ascp[:B] = ascale
+            else:
+                hi8p, ascp = hi8, ascale
+            acc = torch._int_mm(hi8p, i8w.t())
+            logits = acc.float()[:B] * ascp[:B] * self._draft_i8_scale[None, :]
+            top = logits.topk(32, dim=-1)
+            w32 = weight[top.indices.reshape(-1)].view(B, 32, H)
+            hh = hidden_states.unsqueeze(1).expand(-1, 32, -1)
+            exact = torch.einsum("bkh,bkh->bk", hh.float(), w32.float())
+            pick = top.indices.gather(1, exact.argmax(dim=-1, keepdim=True)).squeeze(1)
+            return self._draft_id_to_target_id[pick].to(torch.long)
         k = os.environ.get("VLLM_MTP_DRAFT_TOPK", "").strip()
         try:
             k = int(k) if k else 0
