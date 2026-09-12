@@ -16,6 +16,7 @@
 #   NO_RESTART         (1 = just print the command)
 #   EXTRA_DOCKER       (extra docker args appended verbatim: -e/-v for patches)
 #   DRAFT_TOPK         (sets VLLM_MTP_DRAFT_TOPK env in container, F4a-lite)
+#   MTP_K              (overrides num_speculative_tokens; default 3)
 set -uo pipefail
 cd /home/nmt/flashnext-spark
 
@@ -71,7 +72,7 @@ CMD=(docker run -d --name "$CONTAINER_NAME"
   --enable-chunked-prefill --reasoning-parser qwen3
   --enable-auto-tool-choice --tool-call-parser qwen3_coder
   --distributed-executor-backend mp
-  --speculative-config '{"method":"mtp","num_speculative_tokens":3,"use_local_argmax_reduction":true,"disable_eagle_block_drop":true}'
+  --speculative-config '{"method":"mtp","num_speculative_tokens":'"${MTP_K:-3}"',"use_local_argmax_reduction":true,"disable_eagle_block_drop":true}'
   --compilation-config '{"mode":0,"cudagraph_mode":"FULL_DECODE_ONLY","cudagraph_capture_sizes":[4,8,12,16,20,24,28,32]}'
   $EXTRA
   --host 0.0.0.0 --port 8888)

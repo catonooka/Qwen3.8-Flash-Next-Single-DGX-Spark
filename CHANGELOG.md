@@ -989,3 +989,12 @@ C1 gap needs Bole-style tree verify (GB10-native evidence), MonoMoE persistent
 MoE kernels, or the target-logits-seeded F4a (draft acceptance lift). All
 banked in research4/ + CAMPAIGN_NOTES with port-effort estimates.
 
+
+## 2026-09-12 (k-sweep close) — MTP k=4 with INT8 heads: REJECTED, k=3 stays
+
+With both heads at half bytes, k=4 was re-tested (cheaper drafts shift the
+optimum in theory). Measured: C1 prose 54.5 vs 55.8 at k=3 (−2.3%), C4 122.7
+(=). Acceptance rose 3.03 -> 3.45 but the 5-token verify batch pulls ~10 extra
+experts per step and eats the gain. The k=3 optimum is structural on this
+model, not a draft-cost artifact. relaunch.sh gained the MTP_K override lane.
+
