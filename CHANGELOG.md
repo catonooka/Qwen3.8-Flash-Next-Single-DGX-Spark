@@ -1051,6 +1051,14 @@ recipe in .env.sample and relaunch.sh.
   specified: add `tits.numel() == B0` to the F4b guard, then re-run on V1
   runner and compare decode-only. The 3-8 ms/cycle eager-draft overhead
   estimate stands (bucket 5, research4/profiled-cost-reduction.md).
+- **Piecewise re-probe 03:30-03:36 (day 3, hardened guard, V1 runner):
+  REJECTED CONCLUSIVELY.** The guard fix works (no crash), but the arm
+  reads C1 30.9/31.8 (−43% vs 55.0), C4 58.1/96.0, C8 139.4/142.9, and
+  acceptance itself collapses to 0.570/0.420/0.329 (vs 0.88/0.68/0.49) —
+  the V1 runner + piecewise draft threading degrades the drafter far more
+  than the 3-8 ms eager overhead it removes. Piecewise drafter is dead on
+  this image family; only a future image where V2 supports torch.compile
+  could re-open it.
 - relaunch.sh hygiene: alloc-tuning envs (`expandable_segments`,
   `MALLOC_ARENA_MAX=2`) now gated behind `ALLOC_TUNING=1` so A/B arms booted
   from the script stay single-variable vs the standing stack.
