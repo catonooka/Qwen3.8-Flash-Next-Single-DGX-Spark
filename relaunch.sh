@@ -33,6 +33,7 @@ fi
 V=/usr/local/lib/python3.12/dist-packages/vllm
 
 CMD=(docker run -d --name "$CONTAINER_NAME"
+  --cpuset-cpus 5-9,15-19   # GB10 X925 big cores (cluster-recipe: +2-3%; measured +1.1% here, 4 runs)
   --gpus all --network host --ipc host
   --cap-add SYS_NICE --cap-add SYS_PTRACE
   --ulimit memlock=-1 --ulimit stack=67108864
