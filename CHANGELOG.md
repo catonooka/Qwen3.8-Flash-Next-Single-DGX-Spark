@@ -1208,3 +1208,28 @@ for single-box, A/B'd on the standing stack (bench_decode.py, 6-task mix, 2 reps
 
 Net: +1.1% shipped, one sysctl left manual, two levers parked pending the 0.29
 migration decision. Commit 66c9783.
+
+## 2026-09-14 (b) — post-cpuset full regression: all lanes green, standing numbers hold
+
+Purpose: verify the X925 cpuset pin (commit 66c9783) changed nothing for the worse
+across the full suite, same protocols as day-2 close. Boot = relaunch.sh no-arg
+(cpuset baked in). One anomaly en route: the container took a clean SIGTERM/exit-0
+mid-bench at 20:05 — no OOM, no watchdog, no forensic trace; relaunch reproduced
+cleanly. If it recurs, suspect an external stop, not the stack.
+
+- **C-ladder (sparkDash warm sweep, 2 reps/level, prose):**
+  C1 55.2-56.7 / C4 129.0-133.1 / C8 193.8-194.8 tok/s vs day-2 54.8-56.5 / ~125 /
+  186-190 — cpuset arm at or above standing on every level. Acceptance
+  0.84-0.89/0.63-0.69/0.46-0.52 (unchanged). ms/step C1 53.9-54.5 (60.2 → ~54 on
+  the matched S=1 rep0 comparison is mostly protocol variance; range overlaps).
+- **Prefill ladder:** 8k 2,343-2,355 / 16k 2,197-2,419 / 32k 2,375-2,433 /
+  64k 2,387-2,389 tok/s — at or above the documented 2,332@32k / 2,279@64k.
+- **Quality gates (quality/cpuset-final.json):** reasoning 11/11, needles 2/3
+  (the same known 5%-depth terse artifact, PASS at 50/95), greedy 9/20
+  byte-identical vs f4bv2-gates — above the 2/20 same-boot control, equal to the
+  F4b ship gate itself. VERDICT: no quality change.
+- Raw rows: logs/ab_standing_final.jsonl (day-2 ref), mtp_results.jsonl
+  (cpuset-warm-*), logs/prefill_ladder.jsonl (cpuset-final), quality/cpuset-final.json.
+
+Conclusion: cpuset pin + compaction0 stack confirmed as the new standing.
+relaunch.sh + this entry = the updated recipe.
