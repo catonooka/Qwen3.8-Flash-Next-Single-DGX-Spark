@@ -36,9 +36,9 @@ below repeats it.
 
 | Lane | Upstream recipe | This fork (standing) | Improvement |
 |---|---|---|---|
-| Single stream (C1, prose) | 47.6–48.7 tok/s | **54.8–56.5 tok/s** | **+13–16%** |
-| 4 streams (C4) | 107.8 tok/s | **~125 tok/s** | **+16%** |
-| 8 streams (C8) | not measured (matched protocol) | **186–190 tok/s** | new lane |
+| Single stream (C1, prose) | 47.6–48.7 tok/s | **54.8–56.7 tok/s** | **+13–17%** |
+| 4 streams (C4) | 107.8 tok/s | **129–133 tok/s** | **+20–23%** |
+| 8 streams (C8) | not measured (matched protocol) | **194–198 tok/s** | new lane |
 | Prefill @32k (262k native) | 2,128 tok/s | 2,332 tok/s | **+9.6%** |
 | Prefill @64k (262k native) | 2052 tok/s | 2,279 tok/s | **+11.0%** |
 | Prefill @400k (512k YaRN) | 1,602 tok/s | 1,776 tok/s | **+10.9%** (TTFT 250 s → 225 s) |
@@ -50,6 +50,18 @@ wins. C8 sustained soak: mean 129.7 / p95 147.2 / min 108.0 tok/s, zero
 dips (116,749 tok).
 
 ### History (newest first)
+
+**2026-09-14 (day 4) — cluster-recipe levers + full regression.**
+Audited github.com/bilikaz/qwen38-flash-next-cluster-recipe (2×Spark kit) for
+single-box wins: cpuset pin to the X925 big cores **shipped (+1.1% one-shot,
+C4/C8 +3-6% warm)**; `vm.compaction_proactiveness=0` neutral on our CPU-mmap'd
+PLE layout (their GPU-resident table is why it pays on theirs); Marlin
+atomic-add skipped (already rejected day-2); async-scheduling + hibrid48 NVFP4
+output head parked behind the vLLM 0.29 migration. Full post-change regression
+(same protocols as day-2): C1 55.2-56.7 / C4 129-133 / C8 194-198 warm,
+prefill 2,375-2,433 @32k, quality gates identical to the F4b ship gate
+(reasoning 11/11, needles 2/3 known artifact, greedy 9/20 > 2/20 control).
+No quality loss.
 
 **2026-09-13 (day 3) — memory floor proven; Bole tree port underway.**
 Standing numbers unchanged. Live torch-profiler capture on the final stack:
