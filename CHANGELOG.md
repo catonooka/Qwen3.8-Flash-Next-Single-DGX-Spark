@@ -1176,3 +1176,35 @@ recipe in .env.sample and relaunch.sh.
  doubling acceptance ≈ +60-80% throughput — the only lever of that size.
  - Day-3 commits: 69c37ec (piecewise rejected) → 7f24480 (feasibility map).
 
+
+## 2026-09-14 — cluster-recipe (bilikaz, 2×Spark) portable-lever audit on the single Spark
+
+Repo: github.com/bilikaz/qwen38-flash-next-cluster-recipe (v3, 2026-09-13). Its headline
+(92 avg / 107 peak tok/s @ c=1) is a 2×TP2/RDMA number — not portable. Four levers audited
+for single-box, A/B'd on the standing stack (bench_decode.py, 6-task mix, 2 reps/arm):
+
+- **vm.compaction_proactiveness 20→0: NEUTRAL here.** Their claim "~10%, 4-5s hitch
+  every ~37s" did not reproduce on our serve — compaction0 46.9-47.5 vs compaction20
+  47.0-47.5, overlapping. Likely because their PLE table is GPU-RESIDENT (v3 patch 01,
+  MBX_PLE_REPLICATE=1) vs our CPU-mmap'd table — their pages ARE GPU pages, ours aren't.
+  Left at 0 anyway (free, no downside measured). NOT boot-persisted; re-apply with
+  `sudo sysctl vm.compaction_proactiveness=0` if wanted.
+- **cpuset 5-9,15-19 (X925 big cores): +1.1%, SHIPPED** (pinned 47.2-47.5 ×4 vs
+  all-core 46.9 ×2; their claim +2-3%). relaunch.sh now pins the container; live
+  container updated via docker update.
+- **Marlin VLLM_MARLIN_USE_ATOMIC_ADD=1: SKIPPED** — we rejected Marlin atomic-add on
+  2026-09-12 with clean warm data; their env confirms the same lever, no new information.
+- **async-scheduling: NOT TESTED** — needs vLLM ≥0.23 flag semantics; our fork is
+  0.1.dev20073 (V1-era). Parked with the 0.29 migration below.
+- **hibrid48 NVFP4 output head (v3's big win, 17.7→22.0 steps/s on their kit): PARKED.**
+  Requires upstream vLLM 0.29 + their image patches (01/11/12) + a checkpoint swap
+  (myllmbox/Qwen3.8-Flash-Next-hibrid48, ~99G) + rebuilding our entire standing patch
+  set (spinfix/ablit/trimix/F4b/INT8/skinny) against 0.29 sources. That is a full
+  campaign, not a lever. Quality measured on their serve: HumanEval 95.7, GSM8K 98.0,
+  IFEval 91.5, MMLU-Pro 84.9 (thinking on) — no quality loss claimed, no measured
+  hibrid47 A/B yet on their side either.
+- Their fp8-KV note (PR #54846 port, −0.3 acceptance ≈ −7% tok/s) matches our day-1
+  finding on the same trade — cross-validates both stacks.
+
+Net: +1.1% shipped, one sysctl left manual, two levers parked pending the 0.29
+migration decision. Commit 66c9783.
