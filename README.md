@@ -26,28 +26,66 @@ Hugging Face cache and fails fast if it is absent. Budget ~130 GiB of free disk:
 
 ## This fork: measured improvements over upstream `ef1af5f`
 
-Four changes, each A/B tested on the same host with the same bench scripts,
-each quality-gated (needles 3/3 at 120k tokens, 11/11 reasoning) before
-being kept. Upstream's own work (65k draft vocab, BF16 recurrent state, FP8
-KV hoist, ABLIT lane) is inherited as-is; nothing below repeats it.
+Every change was A/B tested on the same host with the same bench scripts and
+quality-gated (needles 3/3 at 120k tokens, 11/11 reasoning) before being
+kept. The table below is the **current standing stack** (2026-09-12 close,
+re-verified unchanged 2026-09-13); the campaign history underneath records
+how it got here, newest first. Upstream's own work (65k draft vocab, BF16
+recurrent state, FP8 KV hoist, ABLIT lane) is inherited as-is; nothing
+below repeats it.
 
-| Lane | Upstream recipe | This fork | Improvement |
+| Lane | Upstream recipe | This fork (standing) | Improvement |
 |---|---|---|---|
+| Single stream (C1, prose) | 47.6–48.7 tok/s | **54.8–56.5 tok/s** | **+13–16%** |
+| 4 streams (C4) | 107.8 tok/s | **~125 tok/s** | **+16%** |
+| 8 streams (C8) | not measured (matched protocol) | **186–190 tok/s** | new lane |
 | Prefill @32k (262k native) | 2,128 tok/s | 2,332 tok/s | **+9.6%** |
 | Prefill @64k (262k native) | 2052 tok/s | 2,279 tok/s | **+11.0%** |
 | Prefill @400k (512k YaRN) | 1,602 tok/s | 1,776 tok/s | **+10.9%** (TTFT 250 s → 225 s) |
 | Warm agent turn (16k ctx) | ~1.15 s | ~0.51 s | **2.2x faster** |
-| 4 streams aggregate | 107.8 tok/s | 112–118 tok/s | **+4–9%** |
-| Single stream | 47.6–48.7 tok/s | 46–50 tok/s | flat (bandwidth floor) |
 | Prefix-cache state corruption | present (vLLM race) | fixed (#50729) | correctness |
 
-The four changes behind the table: `MAX_NUM_BATCHED_TOKENS` 2048 → 4096,
-the skinny-GEMM image (`skinny/`, build with
+Acceptance per draft position held at 0.881/0.680/0.485 across the decode
+wins. C8 sustained soak: mean 129.7 / p95 147.2 / min 108.0 tok/s, zero
+dips (116,749 tok).
+
+### History (newest first)
+
+**2026-09-13 (day 3) — memory floor proven; Bole tree port underway.**
+Standing numbers unchanged. Live torch-profiler capture on the final stack:
+GPU-busy **93% at C1** — the engine is at its memory floor; eager-draft CPU
+overhead ≤7%. MoE NVFP4 grouped GEMM 28.6% / dense MXFP8 25.1% / WMMA bf16
+small-N 14.1% / INT8 heads 9.0% / skinny CuTe 7.2% / GDN fused state 1.2%.
+Piecewise-drafter lane rejected conclusively (C1 −43%, acceptance collapse
+0.57/0.42/0.33); 32k draft-vocab slice closed by tokenizer coverage (VI
+prose 30.2% vs 65k's 98–100%); trimix_65k stays. The remaining path to
+80 tok/s single-stream is acceptance-side only: Bole tree-verify (plan in
+`research4/bole-port-plan.md`; GDN sibling-branch kernel, tree verify-cost
+bench, rejection sampler, and QSA ancestor-mask are already
+hardware-proven in `f4b/`; est. C1 55 → 65–68 at acceptance 2.98 → 3.6).
+
+**2026-09-12 (day 2) — F4b v2 shipped; standing decode ladder raised.**
+Final standing = spinfix + ablit + trimix_fill_65k + MTP3 + vLLM #54048 +
+INT8 both heads + F4b v2 (hardened guard a5a8aac) + LPI-1/2/3 off.
+Verified warm: **C1 54.8–56.5 / C4 ~125 / C8 186–190** one-shot (from
+46–50 / 112–118 / 181). F4b v2 threads the acceptance-aware
+`token_indices_to_sample` into the draft stash: step-0 INT8-slice topk
+(top-32 of 65,536 per row) replaced by a 64-row gather + exact rescore;
+all verify widths B=1..8 engage. Also this day: Marlin atomic-add
+REJECTED (clean warm data); HC skinny/INT8 headroom claim REJECTED on-box
+(L2-resident 293–497 GB/s). `relaunch.sh` reproduces the whole stack with
+no arguments.
+
+**2026-09-07 (day 1) — bandwidth-side campaign.** The four changes:
+`MAX_NUM_BATCHED_TOKENS` 2048 → 4096, the skinny-GEMM image (`skinny/`,
+build with
 `docker build -t vllm-skinny-tp1:v1 -f skinny/Dockerfile.skinny-gemm skinny/`),
 vLLM #50729 backport (Mamba copy race), and vLLM #53388 backport
-(`disable_eagle_block_drop`, the agent-turn win). `.env.sample` ships all
-of it as default; a fresh clone reproduces the numbers with no manual
-editing.
+(`disable_eagle_block_drop`, the agent-turn win) — the prefill, agent-turn,
+and correctness rows of the table above. Single-stream was flat then
+(46–50 tok/s, bandwidth floor); decode was raised on day 2 above.
+`.env.sample` ships all of day 1 as default.
 
-Trade-offs and the full campaign log (including what was tried and
-rejected, with numbers): [`docs/perf-campaign-2026-09-07.md`](docs/perf-campaign-2026-09-07.md).
+Per-change detail, raw A/B rows, and the full list of what was tried and
+rejected: [`CHANGELOG.md`](CHANGELOG.md) (newest first) and
+[`docs/perf-campaign-2026-09-07.md`](docs/perf-campaign-2026-09-07.md).
