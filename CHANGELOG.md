@@ -1296,3 +1296,39 @@ cleanly. If it recurs, suspect an external stop, not the stack.
 
 Conclusion: cpuset pin + compaction0 stack confirmed as the new standing.
 relaunch.sh + this entry = the updated recipe.
+
+## 2026-09-14 (c) — bilikaz single-Spark kit (qwen38-flash-next-recipe v3) cross-analysis
+
+Repo: github.com/bilikaz/qwen38-flash-next-recipe, v3 tagged TODAY (2026-09-14).
+First single-Spark stack at measured parity with ours: 60 tok/s C1 code (64 peak) /
+134 C4 / 194 C8 sustained, acceptance 3.4, quality-gated (HumanEval 95.7 thinking-on).
+Different route to the same place:
+
+- Upstream vLLM 0.29 + 8 patches vs our fork 0.1.dev20073 + 17 mounts.
+- hibrid48 checkpoint (NVFP4 OUTPUT head, 1.18→0.33 GiB) vs our ablit body + INT8 heads.
+  Same idea (head bytes = 27% of step), different implementation: they re-quantize the
+  checkpoint head; we quantize the head reads at runtime. Theirs also fixes it for the
+  DRAFT head (a second copy of the win we only get on the verify side).
+- Marlin MoE (atomic-add ON) vs our skinny CuTe — we rejected Marlin atomic-add on
+  2026-09-12 with clean warm data on OUR stack; theirs is measured on 0.29 where
+  Marlin is the fastest NVFP4 W4A16 backend. Not a contradiction — different engine.
+- Demand-paged PLE mmap (never allocated, populate-after-boot) vs our packed 27G
+  CPU-mmap worker. Same memory theory, cleaner lifecycle.
+- K=3 confirmed optimal on their kit too (K=4: +3-8% tok/s at −10% steps, 8th seat
+  lost) — cross-validates our day-2 K-sweep rejection (k=3 structural, not
+  draft-cost artifact).
+
+Levers NOT yet on our stack, ranked for portability:
+1. NVFP4 draft head (hibrid48's second half) — our INT8 covers verify head only;
+   the draft head still runs BF16. Requires checkpoint surgery, not a 0.29 port.
+2. async-scheduling — 0.29 flag, +9-12% at c=4-5. Blocked on our fork (V1-era
+   engine); arrives free with any 0.29 migration.
+3. PLE populate-after-boot warm pass — our packed table builds at first boot and
+   warms naturally; a deliberate post-warm populate could shave the cold-table
+   minutes they describe (15-17 steps/s until resident). Cheap to test on ours.
+4. MALLOC_TRIM/MMAP_THRESHOLD tuning — free, untested on ours.
+
+Standing conclusion: two independent stacks, same silicon, same ceilings (60 C1 /
+194 C8). Their route costs a checkpoint swap + engine migration but inherits
+upstream; ours carries surgical runtime patches on an old engine base. The 80-tps
+target remains acceptance-side (Bole tree) on either stack.
