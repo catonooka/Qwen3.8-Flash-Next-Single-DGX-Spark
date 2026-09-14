@@ -1332,3 +1332,44 @@ Standing conclusion: two independent stacks, same silicon, same ceilings (60 C1 
 194 C8). Their route costs a checkpoint swap + engine migration but inherits
 upstream; ours carries surgical runtime patches on an old engine base. The 80-tps
 target remains acceptance-side (Bole tree) on either stack.
+
+## 2026-09-14 (d) — bilikaz-lever test sweep: 3 REJECTED, 1 upgraded (all measured)
+
+Follow-up to the cross-analysis (entry c). All four portable levers tested on the
+standing stack, sparkDash warm sweep protocol, 2 reps/level, prose:
+
+- **async-scheduling: REJECTED.** Two arms: env-var arm was a placebo (our fork
+  logs "Unknown vLLM environment variable: VLLM_ASYNC_SCHEDULING" — the env lane
+  does not exist here; the CLI flag --async-scheduling does, EngineArgs carries
+  it). Real-flag arm confirmed engaged ('async_scheduling': True in non-default
+  args): C1 51.3-55.1 / C4 125.5-131.1 / C8 172.7-194.2 vs standing 55.2-56.7 /
+  129-133 / 193.8-194.8 — no gain at any level, C8 rep1 notably worse (172.7).
+  Their +9-12% @ c=4-5 doesn't transfer: their box runs 32 seats with scheduler
+  gaps to fill; our 8-seat memory-floor profile (93% GPU-busy) has none.
+- **glibc MALLOC_TRIM/MMAP_THRESHOLD: REJECTED.** Env verified set in container;
+  C1 52.8-53.7 / C4 123.1-130.3 / C8 188.5-188.9 — flat within noise. Their win
+  is loader-phase page-cache hygiene; our boot already drops shards (lazy
+  safetensors + spinfix lane).
+- **PLE populate-after-boot (ple.sh prewarm): NOT APPLICABLE — memory-budget
+  bound.** Worker's packed-table mmap is 26.8 GiB mapped / 2.05 GiB resident.
+  Touched all 7,031,284 pages via process_vm_readv (2s) — RSS immediately
+  reclaimed to 0.42 GiB: our GPU process pins 101G (weights + 20G KV pool),
+  leaving ~20G available; the table CANNOT be resident. bilikaz runs 72G+8G
+  (17G more headroom) — that's why populate works there. Our on-demand NVMe
+  streaming (57 KiB/token, priced into standing numbers) is the design
+  consequence of keeping the 20G KV pool. Trade = long-context capacity for
+  table residency; not taken.
+- **NVFP4 output head (hibrid48's lever): NUMERICALLY PROVEN, KERNEL-BLOCKED
+  here.** Simulated group-16 e4m3-scale + e2m1-grid quant of our own lm_head
+  (CPU fp32, /tmp/rc.py recipe): P(BF16-top1 ∈ top-64 screen) = 1.0000 over 200
+  draws — identical to our shipped INT8 screen's certification. A 4-bit screen
+  is lossless-safe for the same two-stage protocol. BUT: our fork has no 4-bit
+  GEMV for an unquantized-head module (dequant-then-BF16-GEMV re-reads 1.27G,
+  erasing the win); their win is checkpoint-level (hibrid48) + marlin NVFP4
+  kernels on vLLM 0.29. Upgrade: the parked day-2 "draft-head Triton row-GEMV"
+  lane (research4/profiled-cost-reduction.md, S-class, +3-6% claim) now targets
+  FP4 not INT8 — half the draft-head bytes again.
+
+Standing restored after (malloc env arm removed). Net of the day: cross-stack
+levers are engine-shaped, not config-shaped; our remaining C1 headroom is where
+day-3 left it — Bole tree (L) + now FP4 draft-head GEMV (S/M).
