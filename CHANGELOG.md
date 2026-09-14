@@ -1373,3 +1373,31 @@ standing stack, sparkDash warm sweep protocol, 2 reps/level, prose:
 Standing restored after (malloc env arm removed). Net of the day: cross-stack
 levers are engine-shaped, not config-shaped; our remaining C1 headroom is where
 day-3 left it — Bole tree (L) + now FP4 draft-head GEMV (S/M).
+
+## 2026-09-14 (e) — decode ladder by content type: code 68 / json 66 / structured 71 at C1, C8 276
+
+sparkDash's bench API natively supports four prompt types (structured / prose /
+code / json — src/shared/llmPrompts.js, same fill-to-max protocol); our headline
+sweeps had only ever run prose. Ran all three missing types on the standing
+stack, warm, 2 reps/level (raw rows in logs/overnight-2026-09-05.jsonl,
+tags standing-code / standing-json / standing-struct):
+
+| type | C1 tok/s | C4 | C8 | tok/step | per-pos acceptance |
+|---|---|---|---|---|---|
+| prose (standing ref) | 55-57 | 129-133 | 194-198 | 2.9 | 0.88/0.68/0.49 |
+| **code** | **67.7-68.6** | 173-184 | **276.1-276.6** | 3.86 | 1.00/0.96/0.90 |
+| **json** | 47.8-66.2 | 142-167 | 252-264 | 3.5-3.6 | 0.96/0.85/0.73 |
+| **structured (count 1-200)** | 43.4-71.3 | 174-190 | 209.7-337.9 | 3.6-4.0 | up to 1.00/1.00/0.99 |
+
+Reading it: MTP-3 acceptance is content-bound, exactly as the day-1 memory said
+("decode is strongly content-dependent") — but the size of the effect is the
+story: near-deterministic text (code, counting) drives per-position acceptance
+to ~1.0, tok/step to the 3.86-3.99 ceiling (max 4.0 = K+1 fully accepted), and
+C8 aggregate 42% above prose. Engine steps/s are IDENTICAL across types (same
+memory floor — C8 109.7 ms/step code vs 117-123 prose, C1 ~56-57 both): all the
+gain is acceptance, zero is bandwidth. Cross-validates bilikaz's "107 tok/s
+peak" (their best window on code-class text) and explains it.
+
+Numbers to quote per workload now: prose 55-57, code 68 (C1) / 276 (C8 peak).
+The structured C8 337.9 outlier rep is a counting task that hit 99% acceptance
+with warm graphs — real, but quote the conservative 209-276 band.
